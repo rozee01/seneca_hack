@@ -1,0 +1,34 @@
+# Tweet Simulator Requirements
+# Core dependencies for the tweet streaming simulator
+
+# WebSocket support for real-time streaming
+websockets>=11.0.3
+
+# Async support (usually included with Python 3.7+)
+asyncio-mqtt>=0.13.0  # Optional: for MQTT streaming
+
+# Data processing
+pandas>=2.0.0  # Optional: for advanced CSV processing
+
+# JSON handling (built-in, but explicit for clarity)
+# json - built-in module
+
+# Command line argument parsing (built-in)
+# argparse - built-in module
+
+# File system operations (built-in)
+# pathlib - built-in module
+
+# Regular expressions (built-in)
+# re - built-in module
+
+# Date/time handling (built-in)
+# datetime - built-in module
+
+# Random number generation (built-in)
+# random - built-in module
+
+# System operations (built-in)
+# sys - built-in module
+# time - built-in module
+
