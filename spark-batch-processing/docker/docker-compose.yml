@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  spark:
+    image: bitnami/spark:latest
+    container_name: spark
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark
+    volumes:
+      - ./src:/app
+      - ./data:/data
+    ports:
+      - "8080:8080"
+    command: ["spark-submit", "--master", "spark://spark:7077", "/app/main.py"]
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=your_username
+      - POSTGRES_PASSWORD=your_password
+      - POSTGRES_DB=your_database
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
