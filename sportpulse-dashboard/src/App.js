@@ -10,7 +10,7 @@ function App() {
   return (
     <Router>
       <div className="relative flex h-auto min-h-screen w-full flex-col bg-[#111418] dark group/design-root overflow-x-hidden"
-        style={{ fontFamily: '"Space Grotesk", "Noto Sans", sans-serif' }}>
+        style={{ fontFamily: '"Inter", "Noto Sans", sans-serif' }}>
         <Header />
         <div className="flex h-full grow">
           <Sidebar />
