@@ -1,7 +1,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, regexp_replace, lower, trim, from_json
 from pyspark.sql.types import StructType, StructField, StringType
+from pymongo import MongoClient
+from datetime import datetime
 import os
+import json
 
 # -------------------------------
 # 1️⃣ Initialize Spark
@@ -29,6 +32,27 @@ spark = (
 spark.sparkContext.setLogLevel("OFF")
 
 print("[DEBUG] Spark session started with logging disabled.")
+
+# -------------------------------
+# 2.5️⃣ Initialize MongoDB connection
+# -------------------------------
+
+# MongoDB connection string
+mongo_uri = f"mongodb://mongouser:mongopass@mongodb:27017/sportpulse_db?authSource=admin"
+
+print(f"[DEBUG] MongoDB URI configured: mongodb://mongouser:***@mongodb:27017/sportpulse_db")
+
+def get_mongo_client():
+    """Get MongoDB client connection"""
+    try:
+        client = MongoClient(mongo_uri)
+        # Test the connection
+        client.admin.command('ping')
+        print("[DEBUG] MongoDB connection successful.")
+        return client
+    except Exception as e:
+        print(f"[ERROR] MongoDB connection failed: {e}")
+        return None
 
 # -------------------------------
 # 2️⃣ Read from Kafka (all team topics)
@@ -85,33 +109,73 @@ df_clean = (
 print("[DEBUG] Text cleaning applied.")
 
 # -------------------------------
-# 5️⃣ Function to debug each batch
+# 5️⃣ Function to save to MongoDB and Kafka
 # -------------------------------
-def write_to_team_topics(batch_df, batch_id):
+def save_to_mongodb_and_kafka(batch_df, batch_id):
     if batch_df.count() == 0:
         print(f"[DEBUG] Batch {batch_id}: Empty batch.")
         return
 
-    teams = [row['topic'] for row in batch_df.select("topic").distinct().collect()]
-    for team in teams:
-        team_df = batch_df.filter(col("topic") == team)
-        cleaned_topic = f"cleaned_{team.replace(' ', '_')}"
-        print(f"[DEBUG] Writing {team_df.count()} rows to topic '{cleaned_topic}'")
-        team_df.selectExpr(
-            "CAST(topic AS STRING) as key",
-            "to_json(struct(*)) AS value"
-        ).write \
-        .format("kafka") \
-        .option("kafka.bootstrap.servers", "kafka:29092") \
-        .option("topic", cleaned_topic) \
-        .mode("append") \
-        .save()
+    print(f"[DEBUG] Processing batch {batch_id} with {batch_df.count()} records.")
+    
+    # Get MongoDB client
+    mongo_client = get_mongo_client()
+    if mongo_client is None:
+        print("[ERROR] Could not connect to MongoDB. Skipping MongoDB save.")
+        return
+    
+    try:
+        db = mongo_client['sportpulse_db']
+        collection = db.cleaned_tweets
+        
+        # Convert Spark DataFrame to list of dictionaries for MongoDB
+        batch_data = []
+        for row in batch_df.collect():
+            document = {
+                "file_name": row.file_name,
+                "location": row.location,
+                "screenname": row.screenname,
+                "search_query": row.search_query,
+                "original_text": row.text,
+                "clean_text": row.clean_text,
+                "topic": row.topic,
+                "processed_at": datetime.utcnow(),
+                "batch_id": batch_id
+            }
+            batch_data.append(document)
+        
+        # Insert into MongoDB
+        if batch_data:
+            result = collection.insert_many(batch_data)
+            print(f"[DEBUG] Inserted {len(result.inserted_ids)} documents into MongoDB.")
+        
+        # Also save to Kafka topics (keeping original functionality)
+        teams = [row['topic'] for row in batch_df.select("topic").distinct().collect()]
+        for team in teams:
+            team_df = batch_df.filter(col("topic") == team)
+            cleaned_topic = f"cleaned_{team.replace(' ', '_')}"
+            print(f"[DEBUG] Writing {team_df.count()} rows to Kafka topic '{cleaned_topic}'")
+            team_df.selectExpr(
+                "CAST(topic AS STRING) as key",
+                "to_json(struct(*)) AS value"
+            ).write \
+            .format("kafka") \
+            .option("kafka.bootstrap.servers", "kafka:29092") \
+            .option("topic", cleaned_topic) \
+            .mode("append") \
+            .save()
+            
+    except Exception as e:
+        print(f"[ERROR] Error saving to MongoDB: {e}")
+    finally:
+        if mongo_client:
+            mongo_client.close()
 
 # -------------------------------
 # 6️⃣ Start streaming
 # -------------------------------
 query = df_clean.writeStream \
-    .foreachBatch(write_to_team_topics) \
+    .foreachBatch(save_to_mongodb_and_kafka) \
     .option("checkpointLocation", "/tmp/spark_checkpoint_tweets_debug") \
     .trigger(processingTime='1 second') \
     .start()
