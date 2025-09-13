@@ -1,7 +1,3 @@
-"""
-API routes for Football data.
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, and_
@@ -13,8 +9,6 @@ from ..models import Football
 from ..schemas import (
     FootballResponse, 
     FootballList, 
-    FootballFilters, 
-    PaginationParams,
     FootballStats
 )
 

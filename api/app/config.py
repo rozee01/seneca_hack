@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     
     # Kafka Configuration
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_GROUP_ID: str = "sentiment-api-group"
+    KAFKA_TOPIC_SENTIMENT: str = "sentiment_analysis"
+    KAFKA_TOPIC_RAW: str = "raw_social_media"
     
     # Optional additional settings
     EXTERNAL_API_ENABLED: Optional[bool] = False

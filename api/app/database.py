@@ -58,7 +58,7 @@ async def init_db() -> None:
     """Initialize database tables."""
     try:
         # Import all models here to ensure they are registered
-        from .models import Tennis, Football
+        from .models import Nba, Football
         
         async with engine.begin() as conn:
             # Create all tables

@@ -40,17 +40,9 @@ class KafkaClient:
             )
             await self.producer.start()
             
-            # Start consumer with initial topics
-            initial_topics = [
-                settings.KAFKA_TOPIC_SENTIMENT,
-                settings.KAFKA_TOPIC_RAW,
-                # Add pattern for sports topics - we'll subscribe to specific topics instead
-            ]
             
             self.consumer = AIOKafkaConsumer(
-                *initial_topics,
                 bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-                group_id=settings.KAFKA_GROUP_ID,
                 auto_offset_reset='latest',
                 enable_auto_commit=True,
                 value_deserializer=lambda m: json.loads(m.decode('utf-8')),
@@ -64,8 +56,7 @@ class KafkaClient:
             self.is_connected = True
             self.running = True
             logger.info(f"Kafka connections established - "
-                       f"Bootstrap servers: {settings.KAFKA_BOOTSTRAP_SERVERS}, "
-                       f"Topics: {[settings.KAFKA_TOPIC_SENTIMENT, settings.KAFKA_TOPIC_RAW]}")
+                       f"Bootstrap servers: {settings.KAFKA_BOOTSTRAP_SERVERS}")
             
         except Exception as e:
             logger.error(f"Failed to start Kafka connections: {str(e)}")
@@ -250,13 +241,12 @@ class KafkaClient:
             known_topics = [
                 'Liverpool', 'Chelsea', 'Arsenal', 'ManchesterUnited', 'TottenhamHotspur', 
                 'Everton', 'LeicesterCity', 'AFC_Bournemouth', 'Southampton',
-                settings.KAFKA_TOPIC_SENTIMENT, settings.KAFKA_TOPIC_RAW
             ]
             
             return {
                 "topics": known_topics,
                 "brokers": [settings.KAFKA_BOOTSTRAP_SERVERS],
-                "consumer_group": settings.KAFKA_GROUP_ID,
+                "consumer_group": getattr(settings, 'KAFKA_GROUP_ID', 'default-group'),
                 "connected": self.is_connected
             }
         except Exception as e:
@@ -264,7 +254,7 @@ class KafkaClient:
             return {
                 "topics": [],
                 "brokers": [settings.KAFKA_BOOTSTRAP_SERVERS],
-                "consumer_group": settings.KAFKA_GROUP_ID,
+                "consumer_group": getattr(settings, 'KAFKA_GROUP_ID', 'default-group'),
                 "connected": self.is_connected,
                 "error": str(e)
             }
@@ -309,13 +299,3 @@ async def handle_sentiment_message(message: Dict[str, Any], key: Optional[str], 
 async def handle_raw_social_message(message: Dict[str, Any], key: Optional[str], timestamp: int) -> None:
     """Handle raw social media messages."""
     logger.info(f"Processing raw social message: {message.get('id')} from {message.get('platform')}")
-
-
-# Register message handlers
-def register_kafka_handlers() -> None:
-    """Register all Kafka message handlers."""
-    kafka_client.register_message_handler(settings.KAFKA_TOPIC_SENTIMENT, handle_sentiment_message)
-    kafka_client.register_message_handler(settings.KAFKA_TOPIC_RAW, handle_raw_social_message)
-    
-    # Note: Sports topics (cleaned_*) are handled dynamically via handle_sports_topic_message
-    logger.info("Kafka handlers registered. Sports topics will be handled dynamically.")

@@ -11,8 +11,8 @@ import uvicorn
 
 from .config import settings
 from .database import init_db, close_db
-from .kafka_client import start_kafka_consumer, stop_kafka_consumer, register_kafka_handlers
-from .routes import nba, football, kafka_management
+from .kafka_client import start_kafka_consumer, stop_kafka_consumer
+from .routes import kafka, nba, football
 
 # Configure logging
 logging.basicConfig(
@@ -33,13 +33,9 @@ async def lifespan(app: FastAPI):
         await init_db()
         logger.info("Database initialized")
         
-        # Register Kafka handlers
-        register_kafka_handlers()
-        logger.info("Kafka handlers registered")
-        
         # Start Kafka consumer (commented out for local dev)
-        # await start_kafka_consumer()
-        # logger.info("Kafka consumer started")
+        await start_kafka_consumer()
+        logger.info("Kafka consumer started")
         
         logger.info("API startup completed successfully")
         
@@ -54,8 +50,7 @@ async def lifespan(app: FastAPI):
     
     try:
         # Stop Kafka consumer (commented out for local dev)
-        # await stop_kafka_consumer()
-        # logger.info("Kafka consumer stopped")
+        await stop_kafka_consumer()
         
         # Close database connections
         await close_db()
@@ -87,7 +82,7 @@ app.add_middleware(
 # Include routers
 app.include_router(nba.router, prefix="/api/v1")
 app.include_router(football.router, prefix="/api/v1")
-app.include_router(kafka_management.router, prefix="/api/v1")
+app.include_router(kafka.router, prefix="/api/v1")
 
 
 # Global exception handler

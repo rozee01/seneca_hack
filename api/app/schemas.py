@@ -9,47 +9,48 @@ from enum import Enum
 
 
 # NBA Schemas
-class TennisBase(BaseModel):
-    """Base NBA schema with common fields."""
-    match_id: Optional[str] = None
-    tournament: Optional[str] = None
-    date: Optional[datetime] = None
-    round: Optional[str] = None
-    surface: Optional[str] = None
-    player1_name: Optional[str] = None
-    player1_rank: Optional[int] = None
-    player1_country: Optional[str] = None
-    player2_name: Optional[str] = None
-    player2_rank: Optional[int] = None
-    player2_country: Optional[str] = None
-    winner: Optional[str] = None
-    score: Optional[str] = None
-    sets: Optional[str] = None
-    duration_minutes: Optional[int] = None
+class NbaBase(BaseModel):
+    """Base NBA schema with common fields matching table structure."""
+    season: Optional[str] = None
+    league: Optional[str] = None
+    league_name: Optional[str] = None
+    team_id: Optional[str] = None
+    franchise: Optional[str] = None
+    games_played: Optional[int] = None
+    wins: Optional[int] = None
+    losses: Optional[int] = None
+    draws: Optional[int] = None
+    win_percentage: Optional[float] = None
+    goals_scored: Optional[int] = None  # total_points_scored in NBA context
+    goals_conceded: Optional[int] = None  # total_points_conceded in NBA context
+    point_differential: Optional[float] = None
+    sport: Optional[str] = None
+    season_rank: Optional[int] = None
 
 
-class TennisCreate(TennisBase):
-    """Schema for creating Tennis records."""
-    match_id: str
-    tournament: str
-    date: datetime
-    player1_name: str
-    player2_name: str
+class NbaCreate(NbaBase):
+    """Schema for creating NBA records."""
+    season: str
+    league: str
+    team_id: str
+    games_played: int
+    wins: int
+    losses: int
 
 
-class TennisResponse(TennisBase):
-    """Schema for Tennis API responses."""
-    id: int
-    created_at: datetime
-    updated_at: datetime
+class NbaResponse(NbaBase):
+    """Schema for NBA API responses."""
+    season: str
+    league: str
+    team_id: str
     
     class Config:
         from_attributes = True
 
 
-class TennisList(BaseModel):
-    """Schema for paginated Tennis list responses."""
-    items: List[TennisResponse]
+class NbaList(BaseModel):
+    """Schema for paginated Nba list responses."""
+    items: List[NbaResponse]
     total: int
     page: int
     size: int
@@ -58,11 +59,11 @@ class TennisList(BaseModel):
 
 # Football Schemas
 class FootballBase(BaseModel):
-    """Base Football schema with common fields."""
+    """Base Football schema with common fields matching table structure."""
     season: Optional[str] = None
     league: Optional[str] = None
-    team: Optional[str] = None
     league_name: Optional[str] = None
+    team: Optional[str] = None
     franchise: Optional[str] = None
     games_played: Optional[int] = None
     wins: Optional[int] = None
@@ -102,14 +103,13 @@ class FootballList(BaseModel):
 
 
 # Filter Schemas
-class TennisFilters(BaseModel):
-    """Filters for Tennis data queries."""
-    tournament: Optional[str] = None
-    surface: Optional[str] = None
-    player: Optional[str] = None  # Searches both player1_name and player2_name
-    country: Optional[str] = None
-    year: Optional[int] = None
-    winner: Optional[str] = None
+class NbaFilters(BaseModel):
+    """Filters for NBA data queries."""
+    season: Optional[str] = None
+    league: Optional[str] = None
+    team_id: Optional[str] = None
+    franchise: Optional[str] = None
+    min_wins: Optional[int] = None
 
 
 class FootballFilters(BaseModel):
@@ -130,13 +130,16 @@ class PaginationParams(BaseModel):
 
 
 # Statistics Schemas
-class TennisStats(BaseModel):
-    """Tennis statistics summary."""
-    total_matches: int
-    unique_players: int
-    tournaments: List[str]
-    surfaces: List[str]
-    top_players: List[dict]
+class NbaStats(BaseModel):
+    """NBA statistics summary."""
+    total_teams: int
+    unique_seasons: int
+    unique_franchises: int
+    average_wins: float
+    average_losses: float
+    average_win_percentage: float
+    average_points_scored: float
+    average_points_conceded: float
 
 
 class FootballStats(BaseModel):

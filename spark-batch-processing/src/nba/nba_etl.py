@@ -107,7 +107,12 @@ class NBAProcessor:
         
         rankings = team_stats \
             .withColumn("season_rank", row_number().over(window_spec)) \
-            .withColumn("sport", lit("NBA"))
+            .select(
+                "season", "league", "league_name", "team_id", "franchise",
+                "games_played", "wins", "losses", "draws",
+                "win_percentage", "goals_scored", "goals_conceded",
+                "point_differential", "sport", "season_rank"
+            )
         
         return rankings
     

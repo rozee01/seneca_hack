@@ -1,72 +1,52 @@
-"""
-API routes for NBA data.
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, extract
-from typing import Optional, List
+from typing import Optional
 import math
 
 from ..database import get_db
-from ..models import Tennis
+from ..models import Nba
 from ..schemas import (
-    TennisResponse, 
-    TennisList, 
-    TennisFilters, 
-    PaginationParams,
-    TennisStats
+    NbaResponse, 
+    NbaList, 
+    NbaStats
 )
 
 router = APIRouter(prefix="/nba", tags=["NBA"])
 
 
-@router.get("/", response_model=TennisList)
-async def get_tennis_matches(
+@router.get("/", response_model=NbaList)
+async def get_nba_teams(
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(20, ge=1, le=100, description="Items per page"),
-    tournament: Optional[str] = Query(None, description="Filter by tournament"),
-    surface: Optional[str] = Query(None, description="Filter by surface"),
-    player: Optional[str] = Query(None, description="Filter by player name"),
-    country: Optional[str] = Query(None, description="Filter by player country"),
-    year: Optional[int] = Query(None, description="Filter by year"),
-    winner: Optional[str] = Query(None, description="Filter by winner"),
+    season: Optional[str] = Query(None, description="Filter by season"),
+    league: Optional[str] = Query(None, description="Filter by league"),
+    team_id: Optional[str] = Query(None, description="Filter by team ID"),
+    franchise: Optional[str] = Query(None, description="Filter by franchise"),
+    min_wins: Optional[int] = Query(None, description="Minimum wins filter"),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get paginated list of tennis matches with optional filters.
+    Get paginated list of NBA team statistics with optional filters.
     """
     # Build base query
-    query = select(Tennis)
+    query = select(Nba)
     
     # Apply filters
-    if tournament:
-        query = query.where(Tennis.tournament.ilike(f"%{tournament}%"))
+    if season:
+        query = query.where(Nba.season == season)
     
-    if surface:
-        query = query.where(Tennis.surface.ilike(f"%{surface}%"))
+    if league:
+        query = query.where(Nba.league.ilike(f"%{league}%"))
     
-    if player:
-        query = query.where(
-            or_(
-                Tennis.player1_name.ilike(f"%{player}%"),
-                Tennis.player2_name.ilike(f"%{player}%")
-            )
-        )
+    if team_id:
+        query = query.where(Nba.team_id.ilike(f"%{team_id}%"))
     
-    if country:
-        query = query.where(
-            or_(
-                Tennis.player1_country.ilike(f"%{country}%"),
-                Tennis.player2_country.ilike(f"%{country}%")
-            )
-        )
+    if franchise:
+        query = query.where(Nba.franchise.ilike(f"%{franchise}%"))
     
-    if year:
-        query = query.where(extract('year', Tennis.date) == year)
-    
-    if winner:
-        query = query.where(Tennis.winner.ilike(f"%{winner}%"))
+    if min_wins is not None:
+        query = query.where(Nba.wins >= min_wins)
     
     # Count total items
     count_query = select(func.count()).select_from(query.subquery())
@@ -76,18 +56,18 @@ async def get_tennis_matches(
     offset = (page - 1) * size
     query = query.offset(offset).limit(size)
     
-    # Order by date (most recent first)
-    query = query.order_by(Tennis.date.desc())
+    # Order by season and wins (most recent first, then by wins)
+    query = query.order_by(Nba.season.desc(), Nba.wins.desc())
     
     # Execute query
     result = await db.execute(query)
-    matches = result.scalars().all()
+    teams = result.scalars().all()
     
     # Calculate pagination info
     pages = math.ceil(total / size) if total > 0 else 1
     
-    return TennisList(
-        items=matches,
+    return NbaList(
+        items=teams,
         total=total,
         page=page,
         size=size,
@@ -95,127 +75,105 @@ async def get_tennis_matches(
     )
 
 
-@router.get("/{match_id}", response_model=TennisResponse)
-async def get_tennis_match(
-    match_id: int,
+@router.get("/{season}/{league}/{team_id}", response_model=NbaResponse)
+async def get_nba_team(
+    season: str,
+    league: str,
+    team_id: str,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get a specific tennis match by ID.
+    Get a specific NBA team's statistics by season, league, and team ID.
     """
-    query = select(Tennis).where(Tennis.id == match_id)
-    result = await db.execute(query)
-    match = result.scalar_one_or_none()
-    
-    if not match:
-        raise HTTPException(status_code=404, detail="Tennis match not found")
-    
-    return match
-
-
-@router.get("/stats/summary", response_model=TennisStats)
-async def get_tennis_stats(db: AsyncSession = Depends(get_db)):
-    """
-    Get tennis statistics summary.
-    """
-    # Total matches
-    total_matches_query = select(func.count(Tennis.id))
-    total_matches = await db.scalar(total_matches_query)
-    
-    # Unique players (approximate count)
-    unique_players_query = select(func.count(func.distinct(Tennis.player1_name))) + \
-                          select(func.count(func.distinct(Tennis.player2_name)))
-    unique_players = await db.scalar(unique_players_query) or 0
-    
-    # Tournaments
-    tournaments_query = select(func.distinct(Tennis.tournament)).where(Tennis.tournament.is_not(None))
-    tournaments_result = await db.execute(tournaments_query)
-    tournaments = [t[0] for t in tournaments_result.fetchall()]
-    
-    # Surfaces
-    surfaces_query = select(func.distinct(Tennis.surface)).where(Tennis.surface.is_not(None))
-    surfaces_result = await db.execute(surfaces_query)
-    surfaces = [s[0] for s in surfaces_result.fetchall()]
-    
-    # Top players by wins (simplified)
-    top_players = []
-    if total_matches > 0:
-        top_players_query = select(
-            Tennis.winner,
-            func.count(Tennis.winner).label('wins')
-        ).where(
-            Tennis.winner.is_not(None)
-        ).group_by(
-            Tennis.winner
-        ).order_by(
-            func.count(Tennis.winner).desc()
-        ).limit(10)
-        
-        top_players_result = await db.execute(top_players_query)
-        top_players = [
-            {"player": row.winner, "wins": row.wins} 
-            for row in top_players_result.fetchall()
-        ]
-    
-    return TennisStats(
-        total_matches=total_matches or 0,
-        unique_players=unique_players,
-        tournaments=tournaments,
-        surfaces=surfaces,
-        top_players=top_players
+    query = select(Nba).where(
+        Nba.season == season,
+        Nba.league == league,
+        Nba.team_id == team_id
     )
-
-
-@router.get("/tournaments/list")
-async def get_tournaments(db: AsyncSession = Depends(get_db)):
-    """
-    Get list of all tournaments.
-    """
-    query = select(func.distinct(Tennis.tournament)).where(Tennis.tournament.is_not(None))
     result = await db.execute(query)
-    tournaments = [t[0] for t in result.fetchall()]
-    return {"tournaments": sorted(tournaments)}
+    team = result.scalar_one_or_none()
+    
+    if not team:
+        raise HTTPException(status_code=404, detail="NBA team statistics not found")
+    
+    return team
 
 
-@router.get("/surfaces/list")
-async def get_surfaces(db: AsyncSession = Depends(get_db)):
+@router.get("/stats/summary", response_model=NbaStats)
+async def get_nba_stats(db: AsyncSession = Depends(get_db)):
     """
-    Get list of all court surfaces.
+    Get NBA statistics summary.
     """
-    query = select(func.distinct(Tennis.surface)).where(Tennis.surface.is_not(None))
+    # Total teams
+    total_teams_query = select(func.count()).select_from(Nba)
+    total_teams = await db.scalar(total_teams_query)
+    
+    # Unique seasons
+    seasons_query = select(func.count(func.distinct(Nba.season)))
+    unique_seasons = await db.scalar(seasons_query) or 0
+    
+    # Unique franchises
+    franchises_query = select(func.count(func.distinct(Nba.franchise)))
+    unique_franchises = await db.scalar(franchises_query) or 0
+    
+    # Average stats
+    avg_stats_query = select(
+        func.avg(Nba.wins).label('avg_wins'),
+        func.avg(Nba.losses).label('avg_losses'),
+        func.avg(Nba.win_percentage).label('avg_win_percentage'),
+        func.avg(Nba.goals_scored).label('avg_points_scored'),
+        func.avg(Nba.goals_conceded).label('avg_points_conceded')
+    )
+    avg_stats = await db.execute(avg_stats_query)
+    stats = avg_stats.first()
+    
+    return {
+        "total_teams": total_teams,
+        "unique_seasons": unique_seasons,
+        "unique_franchises": unique_franchises,
+        "average_wins": round(stats.avg_wins, 2) if stats.avg_wins else 0,
+        "average_losses": round(stats.avg_losses, 2) if stats.avg_losses else 0,
+        "average_win_percentage": round(stats.avg_win_percentage, 2) if stats.avg_win_percentage else 0,
+        "average_points_scored": round(stats.avg_points_scored, 2) if stats.avg_points_scored else 0,
+        "average_points_conceded": round(stats.avg_points_conceded, 2) if stats.avg_points_conceded else 0
+    }
+
+
+@router.get("/seasons", response_model=list[str])
+async def get_seasons(db: AsyncSession = Depends(get_db)):
+    """Get list of available seasons."""
+    query = select(func.distinct(Nba.season)).order_by(Nba.season.desc())
     result = await db.execute(query)
-    surfaces = [s[0] for s in result.fetchall()]
-    return {"surfaces": sorted(surfaces)}
+    seasons = [row[0] for row in result.fetchall()]
+    return seasons
 
 
-@router.get("/players/search")
-async def search_players(
-    q: str = Query(..., min_length=2, description="Search query for player names"),
-    limit: int = Query(10, ge=1, le=50, description="Maximum number of results"),
+@router.get("/franchises", response_model=list[str])
+async def get_franchises(db: AsyncSession = Depends(get_db)):
+    """Get list of available franchises."""
+    query = select(func.distinct(Nba.franchise)).where(Nba.franchise.is_not(None)).order_by(Nba.franchise)
+    result = await db.execute(query)
+    franchises = [row[0] for row in result.fetchall()]
+    return franchises
+
+
+@router.get("/season/{season}", response_model=NbaList)
+async def get_season_standings(
+    season: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Search for players by name.
-    """
-    # Search in both player1_name and player2_name
-    player1_query = select(Tennis.player1_name).where(
-        Tennis.player1_name.ilike(f"%{q}%")
-    ).distinct()
+    """Get season standings for a specific season."""
+    query = select(Nba).where(Nba.season == season).order_by(Nba.season_rank.asc())
+    result = await db.execute(query)
+    teams = result.scalars().all()
     
-    player2_query = select(Tennis.player2_name).where(
-        Tennis.player2_name.ilike(f"%{q}%")
-    ).distinct()
+    if not teams:
+        raise HTTPException(status_code=404, detail=f"No data found for season {season}")
     
-    # Execute both queries
-    player1_result = await db.execute(player1_query)
-    player2_result = await db.execute(player2_query)
-    
-    # Combine and deduplicate results
-    all_players = set()
-    all_players.update([p[0] for p in player1_result.fetchall() if p[0]])
-    all_players.update([p[0] for p in player2_result.fetchall() if p[0]])
-    
-    # Sort and limit
-    sorted_players = sorted(list(all_players))[:limit]
-    
-    return {"players": sorted_players}
+    return NbaList(
+        items=teams,
+        total=len(teams),
+        page=1,
+        size=len(teams),
+        pages=1
+    )
