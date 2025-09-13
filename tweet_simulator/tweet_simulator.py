@@ -31,7 +31,7 @@ async def emit_rows(rows: List[Dict[str, Any]], rate: float, producer: Producer)
     total = len(rows)
     while True:
         row = rows[idx % total]
-        topic = row["file_name"]  # use team name as topic
+        topic = row["file_name"].replace(" ", "_")  # use team name as topic, replace spaces
         value = json.dumps(row, ensure_ascii=False)
 
         producer.produce(
