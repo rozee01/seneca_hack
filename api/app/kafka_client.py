@@ -43,10 +43,15 @@ class KafkaClient:
             )
             await self.producer.start()
             
-            # Start consumer
-            self.consumer = AIOKafkaConsumer(
+            # Start consumer with initial topics
+            initial_topics = [
                 settings.KAFKA_TOPIC_SENTIMENT,
                 settings.KAFKA_TOPIC_RAW,
+                # Add pattern for sports topics - we'll subscribe to specific topics instead
+            ]
+            
+            self.consumer = AIOKafkaConsumer(
+                *initial_topics,
                 bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
                 group_id=settings.KAFKA_GROUP_ID,
                 auto_offset_reset='latest',
@@ -114,6 +119,50 @@ class KafkaClient:
         self.message_handlers[topic].append(handler)
         logger.info(f"Message handler registered for topic {topic}: {handler.__name__}")
     
+    async def subscribe_to_sports_topics(self, team_names: List[str]) -> None:
+        """Subscribe to sports topics dynamically."""
+        if not self.consumer:
+            logger.error("Consumer not initialized")
+            return
+            
+        sports_topics = [f"cleaned_{team.lower()}" for team in team_names]
+        
+        try:
+            # Get current subscription
+            current_topics = self.consumer.subscription()
+            if current_topics:
+                # Add new sports topics to existing subscription
+                all_topics = list(current_topics) + sports_topics
+            else:
+                all_topics = sports_topics
+            
+            # Remove duplicates
+            all_topics = list(set(all_topics))
+            
+            # Subscribe to all topics
+            self.consumer.subscribe(all_topics)
+            logger.info(f"Subscribed to sports topics: {sports_topics}")
+            
+        except Exception as e:
+            logger.error(f"Failed to subscribe to sports topics: {str(e)}")
+    
+    async def handle_sports_topic_message(self, topic: str, message: Dict[str, Any], key: Optional[str], timestamp: int) -> None:
+        """Handle messages from sports topics."""
+        # Check if this is a sports topic (cleaned_*)
+        if topic.startswith('cleaned_'):
+            from .sports_processor import sports_processor
+            await sports_processor.process_sports_message(message, topic, key, timestamp)
+        else:
+            # Handle other specific topics
+            if topic in self.message_handlers:
+                for handler in self.message_handlers[topic]:
+                    try:
+                        await handler(message, key, timestamp)
+                    except Exception as e:
+                        logger.error(f"Error in message handler for topic {topic}: {str(e)}")
+            else:
+                logger.warning(f"No handlers registered for topic: {topic}")
+    
     async def consume_messages(self) -> None:
         """Main message consumption loop."""
         if not self.consumer or not self.is_connected:
@@ -129,11 +178,7 @@ class KafkaClient:
                 try:
                     await self._process_message(message)
                 except Exception as e:
-                    logger.error("Error processing message", 
-                               topic=message.topic,
-                               partition=message.partition,
-                               offset=message.offset,
-                               error=str(e))
+                    logger.error(f"Error processing message from topic {message.topic}, partition {message.partition}, offset {message.offset}: {str(e)}")
                     continue
                     
         except Exception as e:
@@ -144,22 +189,24 @@ class KafkaClient:
     
     async def _process_message(self, message) -> None:
         """Process a single Kafka message."""
-        topic = message.topic
-        handlers = self.message_handlers.get(topic, [])
-        
-        if not handlers:
-            logger.warning(f"No handlers registered for topic: {topic}")
-            return
-        
-        # Process message with all registered handlers
-        for handler in handlers:
+        try:
+            topic = message.topic
+            
+            # Parse message
             try:
-                await handler(message.value, message.key, message.timestamp)
-            except Exception as e:
-                logger.error("Handler failed", 
-                           topic=topic,
-                           handler=handler.__name__,
-                           error=str(e))
+                data = json.loads(message.value.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                logger.error(f"Failed to decode message from topic {topic}: {str(e)}")
+                return
+            
+            key = message.key.decode('utf-8') if message.key else None
+            timestamp = message.timestamp
+            
+            # Use the new unified handler
+            await self.handle_sports_topic_message(topic, data, key, timestamp)
+            
+        except Exception as e:
+            logger.error(f"Error processing message from topic {topic}: {str(e)}")
     
     async def get_topic_metadata(self) -> Dict[str, Any]:
         """Get metadata about Kafka topics."""
@@ -212,17 +259,12 @@ async def stop_kafka_consumer() -> None:
 # Example message handlers
 async def handle_sentiment_message(message: Dict[str, Any], key: Optional[str], timestamp: int) -> None:
     """Handle sentiment analysis messages."""
-    logger.info("Processing sentiment message", 
-               message_id=message.get("id"),
-               platform=message.get("platform"),
-               sentiment_score=message.get("sentiment_score"))
+    logger.info(f"Processing sentiment message: {message.get('id')} from {message.get('platform')} with score {message.get('sentiment_score')}")
 
 
 async def handle_raw_social_message(message: Dict[str, Any], key: Optional[str], timestamp: int) -> None:
     """Handle raw social media messages."""
-    logger.info("Processing raw social message", 
-               message_id=message.get("id"),
-               platform=message.get("platform"))
+    logger.info(f"Processing raw social message: {message.get('id')} from {message.get('platform')}")
 
 
 # Register message handlers
@@ -230,3 +272,6 @@ def register_kafka_handlers() -> None:
     """Register all Kafka message handlers."""
     kafka_client.register_message_handler(settings.KAFKA_TOPIC_SENTIMENT, handle_sentiment_message)
     kafka_client.register_message_handler(settings.KAFKA_TOPIC_RAW, handle_raw_social_message)
+    
+    # Note: Sports topics (cleaned_*) are handled dynamically via handle_sports_topic_message
+    logger.info("Kafka handlers registered. Sports topics will be handled dynamically.")
