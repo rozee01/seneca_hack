@@ -4,16 +4,15 @@ Main FastAPI application.
 
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import time
 import uvicorn
 
 from .config import settings
 from .database import init_db, close_db
 from .kafka_client import start_kafka_consumer, stop_kafka_consumer, register_kafka_handlers
-from .routes import tennis, football, kafka_management
+from .routes import nba, football, kafka_management
 
 # Configure logging
 logging.basicConfig(
@@ -86,7 +85,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(tennis.router, prefix="/api/v1")
+app.include_router(nba.router, prefix="/api/v1")
 app.include_router(football.router, prefix="/api/v1")
 app.include_router(kafka_management.router, prefix="/api/v1")
 
@@ -105,17 +104,6 @@ async def global_exception_handler(request: Request, exc: Exception):
             "message": str(exc)
         }
     )
-
-
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "timestamp": time.time(),
-        "version": "1.0.0"
-    }
 
 
 # Root endpoint
@@ -164,24 +152,6 @@ async def test_kafka():
         logger.error(f"Kafka test failed: {str(e)}")
         return {"status": "error", "message": str(e)}
 
-
-@app.post("/test/kafka/produce")
-async def test_kafka_produce(message: dict):
-    """Test Kafka message production."""
-    try:
-        from .kafka_client import kafka_client
-        if kafka_client.is_connected:
-            await kafka_client.produce_message(
-                topic=settings.KAFKA_TOPIC_RAW,
-                message=message,
-                key="test-message"
-            )
-            return {"status": "success", "message": "Message sent to Kafka"}
-        else:
-            return {"status": "error", "message": "Kafka not connected"}
-    except Exception as e:
-        logger.error(f"Kafka produce test failed: {str(e)}")
-        return {"status": "error", "message": str(e)}
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ from .database import Base
 
 class Tennis(Base):
     """Tennis matches and player data model."""
-    __tablename__ = "tennis"
+    __tablename__ = "nba_stats"
     
     id = Column(Integer, primary_key=True, index=True)
     
@@ -53,51 +53,26 @@ class Tennis(Base):
 
 
 class Football(Base):
-    """Football matches and team data model."""
-    __tablename__ = "football"
+    """Football team season statistics model."""
+    __tablename__ = "football_stats"
     
-    id = Column(Integer, primary_key=True, index=True)
+    # Using season + league + team as composite key since there's no id column
+    season = Column(String, primary_key=True, index=True)
+    league = Column(String, primary_key=True, index=True)
+    team = Column(String, primary_key=True, index=True)
     
-    # Match Information
-    match_id = Column(String, unique=True, index=True)
-    league = Column(String, index=True)
-    season = Column(String, index=True)
-    date = Column(DateTime, index=True)
-    week = Column(Integer)
-    stadium = Column(String)
+    # League and Team Information
+    league_name = Column(String, index=True)
+    franchise = Column(String)
     
-    # Team Information
-    home_team = Column(String, index=True)
-    away_team = Column(String, index=True)
-    
-    # Match Results
-    home_score = Column(Integer)
-    away_score = Column(Integer)
-    winner = Column(String, index=True)  # 'home', 'away', 'draw'
-    final_result = Column(String)  # Full score like "2-1"
-    
-    # Match Details
-    attendance = Column(Integer)
-    referee = Column(String)
-    weather = Column(String)
-    temperature = Column(Float)
-    
-    # Statistics (if available)
-    home_possession = Column(Float)
-    away_possession = Column(Float)
-    home_shots = Column(Integer)
-    away_shots = Column(Integer)
-    home_shots_on_target = Column(Integer)
-    away_shots_on_target = Column(Integer)
-    home_corners = Column(Integer)
-    away_corners = Column(Integer)
-    home_fouls = Column(Integer)
-    away_fouls = Column(Integer)
-    home_yellow_cards = Column(Integer)
-    away_yellow_cards = Column(Integer)
-    home_red_cards = Column(Integer)
-    away_red_cards = Column(Integer)
-    
-    # Metadata
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    # Season Statistics
+    games_played = Column(Integer)
+    wins = Column(Integer)
+    losses = Column(Integer)
+    draws = Column(Integer)
+    win_percentage = Column(Float)
+    goals_scored = Column(Integer)
+    goals_conceded = Column(Integer)
+    point_differential = Column(Integer)
+    season_rank = Column(Integer)
+    sport = Column(String, index=True)

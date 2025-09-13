@@ -36,10 +36,7 @@ class KafkaClient:
                 value_serializer=lambda v: json.dumps(v).encode('utf-8'),
                 key_serializer=lambda k: k.encode('utf-8') if k else None,
                 acks='all',
-                retries=3,
-                retry_backoff_ms=1000,
                 request_timeout_ms=30000,
-                max_block_ms=10000,
             )
             await self.producer.start()
             
@@ -66,9 +63,9 @@ class KafkaClient:
             
             self.is_connected = True
             self.running = True
-            logger.info("Kafka connections established", 
-                       bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-                       topics=[settings.KAFKA_TOPIC_SENTIMENT, settings.KAFKA_TOPIC_RAW])
+            logger.info(f"Kafka connections established - "
+                       f"Bootstrap servers: {settings.KAFKA_BOOTSTRAP_SERVERS}, "
+                       f"Topics: {[settings.KAFKA_TOPIC_SENTIMENT, settings.KAFKA_TOPIC_RAW]}")
             
         except Exception as e:
             logger.error(f"Failed to start Kafka connections: {str(e)}")
@@ -125,7 +122,8 @@ class KafkaClient:
             logger.error("Consumer not initialized")
             return
             
-        sports_topics = [f"cleaned_{team.lower()}" for team in team_names]
+        # Topics are just team names, not prefixed with "cleaned_"
+        sports_topics = team_names
         
         try:
             # Get current subscription
@@ -148,8 +146,13 @@ class KafkaClient:
     
     async def handle_sports_topic_message(self, topic: str, message: Dict[str, Any], key: Optional[str], timestamp: int) -> None:
         """Handle messages from sports topics."""
-        # Check if this is a sports topic (cleaned_*)
-        if topic.startswith('cleaned_'):
+        # Check if this is a sports topic (team names like Liverpool, Chelsea, etc.)
+        known_teams = [
+            'Liverpool', 'Chelsea', 'Arsenal', 'ManchesterUnited', 'TottenhamHotspur', 
+            'Everton', 'LeicesterCity', 'AFC_Bournemouth', 'Southampton'
+        ]
+        
+        if topic in known_teams:
             from .sports_processor import sports_processor
             await sports_processor.process_sports_message(message, topic, key, timestamp)
         else:
@@ -192,14 +195,45 @@ class KafkaClient:
         try:
             topic = message.topic
             
-            # Parse message
+            # Log raw message details
+            logger.info(f"📨 RAW KAFKA MESSAGE:")
+            logger.info(f"   Topic: {topic}")
+            logger.info(f"   Partition: {message.partition}")
+            logger.info(f"   Offset: {message.offset}")
+            logger.info(f"   Timestamp: {message.timestamp}")
+            logger.info(f"   Key: {message.key}")
+            logger.info(f"   Value (raw): {message.value}")
+            
+            # Handle message parsing - check if it's already parsed or needs parsing
             try:
-                data = json.loads(message.value.decode('utf-8'))
-            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                if isinstance(message.value, dict):
+                    # Already parsed by value_deserializer
+                    data = message.value
+                    logger.info(f"   Message already parsed as dict")
+                elif isinstance(message.value, (bytes, str)):
+                    # Need to parse JSON
+                    if isinstance(message.value, bytes):
+                        data = json.loads(message.value.decode('utf-8'))
+                    else:
+                        data = json.loads(message.value)
+                    logger.info(f"   Message parsed from bytes/string")
+                else:
+                    logger.error(f"Unknown message value type: {type(message.value)}")
+                    return
+                    
+                logger.info(f"   Parsed Data: {json.dumps(data, indent=4)}")
+            except (json.JSONDecodeError, UnicodeDecodeError, TypeError) as e:
                 logger.error(f"Failed to decode message from topic {topic}: {str(e)}")
                 return
             
-            key = message.key.decode('utf-8') if message.key else None
+            # Handle key parsing
+            if isinstance(message.key, bytes):
+                key = message.key.decode('utf-8')
+            elif isinstance(message.key, str):
+                key = message.key
+            else:
+                key = None
+                
             timestamp = message.timestamp
             
             # Use the new unified handler
@@ -210,20 +244,30 @@ class KafkaClient:
     
     async def get_topic_metadata(self) -> Dict[str, Any]:
         """Get metadata about Kafka topics."""
-        if not self.consumer:
-            raise RuntimeError("Kafka consumer not connected")
-        
         try:
-            metadata = self.consumer.cluster
+            # Since we know the available topics from our Kafka setup, return them directly
+            # In a production system, you'd want to dynamically fetch these
+            known_topics = [
+                'Liverpool', 'Chelsea', 'Arsenal', 'ManchesterUnited', 'TottenhamHotspur', 
+                'Everton', 'LeicesterCity', 'AFC_Bournemouth', 'Southampton',
+                settings.KAFKA_TOPIC_SENTIMENT, settings.KAFKA_TOPIC_RAW
+            ]
+            
             return {
-                "topics": list(metadata.topics.keys()),
-                "brokers": [f"{broker.host}:{broker.port}" for broker in metadata.brokers.values()],
+                "topics": known_topics,
+                "brokers": [settings.KAFKA_BOOTSTRAP_SERVERS],
                 "consumer_group": settings.KAFKA_GROUP_ID,
                 "connected": self.is_connected
             }
         except Exception as e:
             logger.error(f"Failed to get topic metadata: {str(e)}")
-            raise
+            return {
+                "topics": [],
+                "brokers": [settings.KAFKA_BOOTSTRAP_SERVERS],
+                "consumer_group": settings.KAFKA_GROUP_ID,
+                "connected": self.is_connected,
+                "error": str(e)
+            }
 
 
 # Global Kafka client instance

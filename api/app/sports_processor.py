@@ -35,65 +35,84 @@ class SportsDataProcessor:
             'bayern': 'football',
             'dortmund': 'football',
             
-            # Tennis players/tournaments (add as needed)
-            'wimbledon': 'tennis',
-            'usopen': 'tennis',
-            'frenchopen': 'tennis',
-            'australianopen': 'tennis',
-            'federer': 'tennis',
-            'nadal': 'tennis',
-            'djokovic': 'tennis',
-            'serena': 'tennis',
+            # NBA teams (add as needed)
+            'lakers': 'nba',
+            'warriors': 'nba',
+            'bulls': 'nba',
+            'celtics': 'nba',
+            'heat': 'nba',
+            'nets': 'nba',
+            'knicks': 'nba',
+            'spurs': 'nba',
+            'rockets': 'nba',
+            'clippers': 'nba',
+            'sixers': 'nba',
+            'nuggets': 'nba',
+            'suns': 'nba',
+            'bucks': 'nba',
         }
     
     def determine_sport_type(self, topic: str, data: Dict[str, Any]) -> Optional[str]:
-        """Determine if this is tennis or football data."""
+        """Determine if this is NBA or football data."""
         topic_lower = topic.lower()
-        file_name_lower = data.get('file_name', '').lower()
-        search_query_lower = data.get('search_query', '').lower()
+        
+        # Map known team topics to sports
+        football_teams = [
+            'liverpool', 'chelsea', 'arsenal', 'manchesterunited', 'tottenhamhotspur',
+            'everton', 'leicestercity', 'afc_bournemouth', 'southampton'
+        ]
+        
+        nba_teams = [
+            'lakers', 'warriors', 'bulls', 'celtics', 'heat', 'nets', 'knicks', 
+            'spurs', 'rockets', 'clippers', 'sixers', 'nuggets', 'suns', 'bucks'
+        ]
+        
+        if topic_lower in football_teams:
+            return 'football'
+        elif topic_lower in nba_teams:
+            return 'nba'
+        
+        # Check message content for keywords
         text_lower = data.get('text', '').lower()
         
-        # Check topic name first
-        for team, sport in self.team_patterns.items():
-            if team in topic_lower or team in file_name_lower:
-                return sport
-        
-        # Check search query and text for football keywords
         football_keywords = [
             'fc', 'football', 'soccer', 'premier league', 'champions league',
             'goal', 'match', 'stadium', 'league', 'cup', 'uefa', 'fifa'
         ]
         
-        tennis_keywords = [
-            'tennis', 'grand slam', 'atp', 'wta', 'set', 'serve', 'ace',
-            'court', 'racket', 'tournament', 'open'
+        nba_keywords = [
+            'nba', 'basketball', 'dunk', 'three pointer', '3pt', 'playoff',
+            'finals', 'court', 'arena', 'points', 'rebounds', 'assists'
         ]
         
-        combined_text = f"{search_query_lower} {text_lower}"
+        football_count = sum(1 for keyword in football_keywords if keyword in text_lower)
+        nba_count = sum(1 for keyword in nba_keywords if keyword in text_lower)
         
-        football_count = sum(1 for keyword in football_keywords if keyword in combined_text)
-        tennis_count = sum(1 for keyword in tennis_keywords if keyword in combined_text)
-        
-        if football_count > tennis_count:
+        if football_count > nba_count:
             return 'football'
-        elif tennis_count > football_count:
-            return 'tennis'
+        elif nba_count > football_count:
+            return 'nba'
         
-        # Default to football if unclear (since most sports social media is football)
+        # Default to football for known football team topics
         return 'football'
     
     async def process_sports_message(self, message: Dict[str, Any], topic: str, key: Optional[str], timestamp: int) -> None:
         """Process incoming sports data message."""
         try:
-            logger.info(f"Processing sports message from topic: {topic}")
+            logger.info(f"=== KAFKA MESSAGE RECEIVED ===")
+            logger.info(f"Topic: {topic}")
+            logger.info(f"Key: {key}")
+            logger.info(f"Timestamp: {timestamp}")
+            logger.info(f"Message: {json.dumps(message, indent=2)}")
+            logger.info(f"================================")
             
             # Determine sport type
             sport_type = self.determine_sport_type(topic, message)
             
             if sport_type == 'football':
                 await self._process_football_data(message, topic, timestamp)
-            elif sport_type == 'tennis':
-                await self._process_tennis_data(message, topic, timestamp)
+            elif sport_type == 'nba':
+                await self._process_nba_data(message, topic, timestamp)
             else:
                 logger.warning(f"Unknown sport type for topic {topic}")
                 
@@ -103,71 +122,51 @@ class SportsDataProcessor:
     async def _process_football_data(self, data: Dict[str, Any], topic: str, timestamp: int) -> None:
         """Process football-related data."""
         try:
-            async with AsyncSessionLocal() as session:
-                # Extract team name from topic (cleaned_<team_name>)
-                team_match = re.search(r'cleaned_(.+)', topic)
-                team_name = team_match.group(1) if team_match else data.get('file_name', 'Unknown')
-                
-                # Create a football social media entry
-                # Note: This is social media data, not match data, so we'll create a simplified entry
-                football_entry = Football(
-                    match_id=f"social_{timestamp}_{hash(data.get('text', ''))[:8]}",
-                    league="Social Media",
-                    season="2025",
-                    date=datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc) if timestamp else datetime.now(timezone.utc),
-                    home_team=team_name,
-                    away_team="Social Media Post",
-                    home_score=None,
-                    away_score=None,
-                    winner=None,
-                    final_result=f"Social media activity for {team_name}",
-                    # Store additional metadata in unused fields
-                    stadium=data.get('location', 'Unknown'),
-                    referee=data.get('screenname', 'Unknown'),
-                    weather=data.get('search_query', ''),
-                    # You could store the social media text in a notes field if you add one
-                )
-                
-                session.add(football_entry)
-                await session.commit()
-                
-                logger.info(f"Stored football social media data for team: {team_name}")
+            # Since this is social media data and our database schema is for season statistics,
+            # we'll just log the activity for now. In a real system, you might want to:
+            # 1. Store social media data in a separate table
+            # 2. Aggregate sentiment/engagement metrics
+            # 3. Update team popularity metrics
+            
+            team_name = topic.replace('_', ' ')  # Convert AFC_Bournemouth to AFC Bournemouth
+            
+            logger.info(f"🏈 FOOTBALL MESSAGE PROCESSED:")
+            logger.info(f"   Team: {team_name}")
+            logger.info(f"   Platform: {data.get('platform', 'Unknown')}")
+            logger.info(f"   User: {data.get('screenname', 'Unknown')}")
+            logger.info(f"   Location: {data.get('location', 'Unknown')}")
+            logger.info(f"   Search Query: {data.get('search_query', 'N/A')}")
+            logger.info(f"   Tweet Text: {data.get('text', '')}")
+            logger.info(f"   Clean Text: {data.get('clean_text', '')}")
+            logger.info(f"   Timestamp: {timestamp}")
+            
+            # You could add logic here to:
+            # - Calculate sentiment scores
+            # - Track trending topics
+            # - Update team social media metrics
+            # - Store in a separate social_media_posts table
                 
         except Exception as e:
-            logger.error(f"Error storing football data: {str(e)}")
-            await session.rollback()
+            logger.error(f"Error processing football data: {str(e)}")
     
-    async def _process_tennis_data(self, data: Dict[str, Any], topic: str, timestamp: int) -> None:
-        """Process tennis-related data."""
+    async def _process_nba_data(self, data: Dict[str, Any], topic: str, timestamp: int) -> None:
+        """Process NBA-related data."""
         try:
-            async with AsyncSessionLocal() as session:
-                # Extract player/tournament name from topic
-                entity_match = re.search(r'cleaned_(.+)', topic)
-                entity_name = entity_match.group(1) if entity_match else data.get('file_name', 'Unknown')
-                
-                # Create a tennis social media entry
-                tennis_entry = Tennis(
-                    match_id=f"social_{timestamp}_{hash(data.get('text', ''))[:8]}",
-                    tournament="Social Media",
-                    date=datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc) if timestamp else datetime.now(timezone.utc),
-                    round="Social Media Post",
-                    surface="Social",
-                    player1_name=entity_name,
-                    player2_name="Social Media",
-                    winner=None,
-                    score=f"Social media activity",
-                    # Store additional metadata
-                    sets=data.get('location', 'Unknown'),
-                )
-                
-                session.add(tennis_entry)
-                await session.commit()
-                
-                logger.info(f"Stored tennis social media data for: {entity_name}")
+            # Similar to football, just log NBA social media activity
+            team_name = topic.replace('_', ' ')
+            
+            logger.info(f"🏀 NBA MESSAGE PROCESSED:")
+            logger.info(f"   Team: {team_name}")
+            logger.info(f"   Platform: {data.get('platform', 'Unknown')}")
+            logger.info(f"   User: {data.get('screenname', 'Unknown')}")
+            logger.info(f"   Location: {data.get('location', 'Unknown')}")
+            logger.info(f"   Search Query: {data.get('search_query', 'N/A')}")
+            logger.info(f"   Tweet Text: {data.get('text', '')}")
+            logger.info(f"   Clean Text: {data.get('clean_text', '')}")
+            logger.info(f"   Timestamp: {timestamp}")
                 
         except Exception as e:
-            logger.error(f"Error storing tennis data: {str(e)}")
-            await session.rollback()
+            logger.error(f"Error processing NBA data: {str(e)}")
 
 
 # Global processor instance

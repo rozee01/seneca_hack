@@ -21,7 +21,7 @@ async def subscribe_to_teams(subscription: TeamsSubscription):
     """
     Subscribe to Kafka topics for specific teams.
     
-    This will subscribe to topics in the format: cleaned_<team_name>
+    This will subscribe to team topics directly (e.g., Liverpool, Chelsea, etc.)
     """
     try:
         if not kafka_client.is_connected:
@@ -34,7 +34,7 @@ async def subscribe_to_teams(subscription: TeamsSubscription):
             "status": "success",
             "message": f"Subscribed to {len(subscription.teams)} team topics",
             "teams": subscription.teams,
-            "topics": [f"cleaned_{team.lower()}" for team in subscription.teams]
+            "topics": subscription.teams
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to subscribe to teams: {str(e)}")
@@ -120,10 +120,10 @@ async def test_sports_data_processing():
     """
     from ..sports_processor import sports_processor
     
-    # Sample sports message based on your structure
+    # Sample sports message based on your actual tweet simulator structure
     sample_message = {
         "file_name": "Liverpool",
-        "location": "Ghana",
+        "location": "Ghana", 
         "screenname": "habibmohammed09",
         "search_query": "#liverpoolfc OR #YNWA OR #LFC",
         "text": "RT @footballitalia: Gian Piero Gasperini's Atalanta are inspiring everyone in Europe, claims Verona coach Ivan Juric, and thinking of the S…",
@@ -132,10 +132,10 @@ async def test_sports_data_processing():
     }
     
     try:
-        # Test processing the message
+        # Test processing the message with actual topic format
         await sports_processor.process_sports_message(
             message=sample_message,
-            topic="cleaned_liverpool",
+            topic="Liverpool",  # Using actual topic format
             key="test_key",
             timestamp=1694600000000  # Sample timestamp
         )
@@ -147,3 +147,55 @@ async def test_sports_data_processing():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process test data: {str(e)}")
+
+
+@router.post("/start-consumption")
+async def start_message_consumption():
+    """
+    Start consuming messages from subscribed topics.
+    """
+    try:
+        if not kafka_client.is_connected:
+            await kafka_client.start()
+        
+        # Start consuming messages in background
+        import asyncio
+        asyncio.create_task(kafka_client.consume_messages())
+        
+        return {
+            "status": "success",
+            "message": "Message consumption started",
+            "running": kafka_client.running
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start message consumption: {str(e)}")
+
+
+@router.get("/available-teams")
+async def get_available_teams():
+    """
+    Get list of available team topics from Kafka.
+    """
+    try:
+        if not kafka_client.is_connected:
+            await kafka_client.start()
+        
+        metadata = await kafka_client.get_topic_metadata()
+        all_topics = metadata.get("topics", [])
+        
+        # Filter to get team topics (these are the ones we know about)
+        known_teams = [
+            'Liverpool', 'Chelsea', 'Arsenal', 'ManchesterUnited', 'TottenhamHotspur', 
+            'Everton', 'LeicesterCity', 'AFC_Bournemouth', 'Southampton'
+        ]
+        
+        available_teams = [topic for topic in all_topics if topic in known_teams]
+        
+        return {
+            "status": "success",
+            "available_teams": available_teams,
+            "all_topics": all_topics,
+            "total_teams": len(available_teams)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get available teams: {str(e)}")

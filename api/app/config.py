@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # API Configuration
-    SECRET_KEY: str = "your-secret-key-change-in-production"
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
     
@@ -29,9 +28,6 @@ class Settings(BaseSettings):
     
     # Kafka Configuration
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
-    KAFKA_TOPIC_SENTIMENT: str = "sentiment-analysis"
-    KAFKA_TOPIC_RAW: str = "raw-social-data"
-    KAFKA_GROUP_ID: str = "sentiment-api"
     
     # Optional additional settings
     EXTERNAL_API_ENABLED: Optional[bool] = False

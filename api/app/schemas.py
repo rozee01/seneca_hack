@@ -8,9 +8,9 @@ from typing import Optional, List
 from enum import Enum
 
 
-# Tennis Schemas
+# NBA Schemas
 class TennisBase(BaseModel):
-    """Base Tennis schema with common fields."""
+    """Base NBA schema with common fields."""
     match_id: Optional[str] = None
     tournament: Optional[str] = None
     date: Optional[datetime] = None
@@ -59,39 +59,34 @@ class TennisList(BaseModel):
 # Football Schemas
 class FootballBase(BaseModel):
     """Base Football schema with common fields."""
-    match_id: Optional[str] = None
-    league: Optional[str] = None
     season: Optional[str] = None
-    date: Optional[datetime] = None
-    week: Optional[int] = None
-    stadium: Optional[str] = None
-    home_team: Optional[str] = None
-    away_team: Optional[str] = None
-    home_score: Optional[int] = None
-    away_score: Optional[int] = None
-    winner: Optional[str] = None
-    final_result: Optional[str] = None
-    attendance: Optional[int] = None
-    referee: Optional[str] = None
+    league: Optional[str] = None
+    team: Optional[str] = None
+    league_name: Optional[str] = None
+    franchise: Optional[str] = None
+    games_played: Optional[int] = None
+    wins: Optional[int] = None
+    losses: Optional[int] = None
+    draws: Optional[int] = None
+    win_percentage: Optional[float] = None
+    goals_scored: Optional[int] = None
+    goals_conceded: Optional[int] = None
+    point_differential: Optional[int] = None
+    season_rank: Optional[int] = None
+    sport: Optional[str] = None
 
 
 class FootballCreate(FootballBase):
     """Schema for creating Football records."""
-    match_id: str
-    league: str
     season: str
-    date: datetime
-    home_team: str
-    away_team: str
-    home_score: int
-    away_score: int
+    league: str
+    team: str
+    league_name: str
+    sport: str
 
 
 class FootballResponse(FootballBase):
     """Schema for Football API responses."""
-    id: int
-    created_at: datetime
-    updated_at: datetime
     
     class Config:
         from_attributes = True
@@ -121,10 +116,10 @@ class FootballFilters(BaseModel):
     """Filters for Football data queries."""
     league: Optional[str] = None
     season: Optional[str] = None
-    team: Optional[str] = None  # Searches both home_team and away_team
-    winner: Optional[str] = None
-    year: Optional[int] = None
-    week: Optional[int] = None
+    team: Optional[str] = None
+    league_name: Optional[str] = None
+    franchise: Optional[str] = None
+    sport: Optional[str] = None
 
 
 # Pagination Schema
@@ -146,8 +141,8 @@ class TennisStats(BaseModel):
 
 class FootballStats(BaseModel):
     """Football statistics summary."""
-    total_matches: int
-    unique_teams: int
+    total_teams: int
     leagues: List[str]
     seasons: List[str]
+    sports: List[str]
     top_teams: List[dict]
