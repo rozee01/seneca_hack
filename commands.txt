@@ -1,0 +1,8 @@
+in order to run the batch : 
+docker compsoe up -d 
+docker exec -it sportpulse-spark-app bash
+spark-submit --packages org.postgresql:postgresql:42.6.0 /app/spark-batch-processing/src/main.py
+
+in order to access postgress table :
+ psql -U sparkuser -d sparkdb
+ \dt
