@@ -1,2 +1,6 @@
 spark-batch-processing/data/*
 spark-batch-processing/.env
+__pycache__/
+.env
+*.pyc
+venv/
