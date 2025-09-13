@@ -1,0 +1,12 @@
+in order to run the batch : 
+docker compsoe up -d 
+docker exec -it sportpulse-spark-app bash
+spark-submit --packages org.postgresql:postgresql:42.6.0 /app/spark-batch-processing/src/main.py
+
+in order to access postgress table :
+ psql -U sparkuser -d sparkdb
+ \dt
+
+streaming running   python .\tweet_simulator.py --csv combined_sports.csv --rate 5 --broker localhost:9092 
+
+preprocessing stream : docker exec -it sportpulse-spark-app spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0  /app/stream_processing/preprocessing.py

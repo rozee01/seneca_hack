@@ -1,0 +1,104 @@
+version: '3.8'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: sportpulse-zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - app-network
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: sportpulse-kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:15
+    container_name: sportpulse-postgres
+    environment:
+      POSTGRES_USER: sparkuser
+      POSTGRES_PASSWORD: sparkpass
+      POSTGRES_DB: sparkdb
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    volumes:
+      - sportpulse_postgres_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7.0
+    container_name: sportpulse-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongouser
+      MONGO_INITDB_ROOT_PASSWORD: mongopass
+      MONGO_INITDB_DATABASE: sportpulse_db
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+    volumes:
+      - sportpulse_mongodb_data:/data/db
+
+  spark-app:
+    image: bitnami/spark:3.5.0
+    container_name: sportpulse-spark-app
+    depends_on:
+      - kafka
+      - postgres
+      - mongodb
+    environment:
+      SPARK_MODE: client
+      KAFKA_BROKERS_DOCKER: "kafka:29092"
+      POSTGRES_HOST: "postgres"
+      POSTGRES_DB: "sparkdb"
+      POSTGRES_USER: "sparkuser"
+      POSTGRES_PASSWORD: "sparkpass"
+      MONGODB_HOST: "mongodb"
+      MONGODB_PORT: "27017"
+      MONGODB_USER: "mongouser"
+      MONGODB_PASSWORD: "mongopass"
+      MONGODB_DATABASE: "sportpulse_db"
+      SPARK_DRIVER_MEMORY: 4g
+      SPARK_EXECUTOR_MEMORY: 4g
+    volumes:
+      - ./sport-pulse-app:/app/sport-pulse-app
+      - ./sport-pulse-data:/app/data
+      - ./.env:/app/.env
+      - ./requirements.txt:/app/requirements.txt
+      - ./spark-batch-processing:/app/spark-batch-processing
+      - ./stream_processing:/app/stream_processing
+    command: >
+      sh -c "pip install --no-cache-dir -r /app/requirements.txt && tail -f /dev/null"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  sportpulse_postgres_data:
+  sportpulse_mongodb_data:
