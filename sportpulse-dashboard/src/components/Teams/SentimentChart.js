@@ -1,19 +1,58 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const SentimentChart = ({
-  positive = 0,
-  neutral = 0,
-  negative = 0,
-  trend = 0,
-}) => {
-  // S'assurer que les valeurs sont des nombres
-  const positiveValue = Number(positive);
-  const neutralValue = Number(neutral);
-  const negativeValue = Number(negative);
+const SentimentChart = ({ teamName, positive = 0, neutral = 0, negative = 0, trend = 0 }) => {
+  // Internal state for live updates
+  const [sentiment, setSentiment] = useState({
+    positive: Number(positive),
+    neutral: Number(neutral),
+    negative: Number(negative),
+  });
+
+  const wsRef = useRef(null);
+  useEffect(() => {
+    if (!teamName) return;
+    // Clean up previous connection
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    const apiUrl = "ws://localhost:8000/api/v1/ws/kafka/";
+    const wsUrl = `${apiUrl}${teamName}`;
+    const websocket = new WebSocket(wsUrl);
+    wsRef.current = websocket;
+    websocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.message && data.message.sentiment_label) {
+          setSentiment((prev) => {
+            const updated = { ...prev };
+            if (data.message.sentiment_label === "positive") updated.positive += 1;
+            if (data.message.sentiment_label === "neutral") updated.neutral += 1;
+            if (data.message.sentiment_label === "negative") updated.negative += 1;
+            return updated;
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    // Cleanup on unmount or teamName change
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [teamName]);
+
+  const total = sentiment.positive + sentiment.neutral + sentiment.negative;
+  const positiveValue = total > 0 ? Math.round((sentiment.positive / total) * 100) : 0;
+  const neutralValue = total > 0 ? Math.round((sentiment.neutral / total) * 100) : 0;
+  const negativeValue = total > 0 ? Math.round((sentiment.negative / total) * 100) : 0;
 
   const data = {
     labels: ["Positive", "Neutral", "Negative"],

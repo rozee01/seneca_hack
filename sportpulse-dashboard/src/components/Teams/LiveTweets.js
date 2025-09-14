@@ -1,82 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
-const LiveTweets = ({ teamName }) => {
+// Accept onSentimentUpdate as a prop
+
+const LiveTweets = ({ teamName, onSentimentUpdate }) => {
   const [tweets, setTweets] = useState([]);
+  const [pendingTweets, setPendingTweets] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('Disconnected');
-  const [ws, setWs] = useState(null);
+  const wsRef = useRef(null);
 
-  const connect = () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      return;
-    }
+  // Accept onSentimentUpdate as a prop
+  // Use props directly
+  // If you want to use destructuring, update the function signature:
+  // const LiveTweets = ({ teamName, onSentimentUpdate }) => {
 
-    if (!teamName) {
-      return;
-    }
-
-    const apiUrl = "ws://localhost:8000/api/v1/ws/kafka/";
-    const wsUrl = `${apiUrl}${teamName}`;
-    
-    setConnectionStatus('Connecting...');
-    
-    const websocket = new WebSocket(wsUrl);
-    
-    websocket.onopen = function(event) {
-      setConnectionStatus('Connected');
-      setWs(websocket);
-    };
-    
-    websocket.onmessage = function(event) {
-      try {
-        const data = JSON.parse(event.data);
-        
-        // Handle pong responses
-        if (data.type === 'pong') {
-          return;
-        }
-        
-        // Extract tweet data if it exists
-        if (data.message && data.message.text) {
-          const newTweet = {
-            id: data.message.tweet_id || Date.now(),
-            text: data.message.text,
-            user: data.message.user || data.message.username || 'Anonymous',
-            timestamp: new Date().toISOString(),
-            sentiment: data.message.sentiment || 0,
-            likes: Math.floor(Math.random() * 100),
-            dislikes: Math.floor(Math.random() * 10),
-            isLive: true
-          };
-          
-          setTweets(prevTweets => [newTweet, ...prevTweets.slice(0, 19)]); // Keep latest 20 tweets
-        }
-      } catch (e) {
-        console.error('Error parsing message:', e);
-      }
-    };
-    
-    websocket.onclose = function(event) {
-      setConnectionStatus('Disconnected');
-      setWs(null);
-    };
-    
-    websocket.onerror = function(error) {
-      setConnectionStatus('Error');
-    };
-  };
+  // Remove connect function, useEffect handles connection
 
   const disconnect = () => {
-    if (ws) {
-      ws.close();
-      setWs(null);
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
       setConnectionStatus('Disconnected');
     }
   };
 
   const sendPing = () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       const ping = { type: 'ping', timestamp: Date.now() };
-      ws.send(JSON.stringify(ping));
+      wsRef.current.send(JSON.stringify(ping));
     }
   };
 
@@ -86,17 +36,82 @@ const LiveTweets = ({ teamName }) => {
 
   // Auto-connect when component mounts
   useEffect(() => {
-    if (teamName) {
-      connect();
+    if (!teamName) return;
+    // Clean up previous connection
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
     }
-    
-    // Cleanup on unmount
+    setConnectionStatus('Connecting...');
+    const apiUrl = "ws://localhost:8000/api/v1/ws/kafka/";
+    const wsUrl = `${apiUrl}${teamName}`;
+    const websocket = new WebSocket(wsUrl);
+    wsRef.current = websocket;
+    websocket.onopen = function(event) {
+      setConnectionStatus('Connected');
+    };
+    websocket.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'pong') return;
+        if (data.message && data.message.text) {
+          const newTweet = {
+            id: data.message.tweet_id || Date.now(),
+            text: data.message.text,
+            user: data.message.screenname || data.message.user || data.message.username || 'Anonymous',
+            location: data.message.location || '',
+            topic: data.topic || data.message.topic || '',
+            sentiment_label: data.message.sentiment_label || '',
+            sentiment_score: data.message.sentiment_score || 0,
+            timestamp: new Date(data.timestamp || Date.now()).toISOString(),
+            isLive: true
+          };
+          // Check for duplicate in pendingTweets and tweets
+          const isDuplicate = pendingTweets.some(t => t.text === newTweet.text && t.user === newTweet.user)
+            || tweets.some(t => t.text === newTweet.text && t.user === newTweet.user);
+          if (!isDuplicate) {
+            setPendingTweets(prev => [...prev, newTweet]);
+            if (onSentimentUpdate && newTweet.sentiment_label) {
+              onSentimentUpdate({
+                sentiment_label: newTweet.sentiment_label,
+                sentiment_score: newTweet.sentiment_score
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing message:', e);
+      }
+    };
+    websocket.onclose = function(event) {
+      setConnectionStatus('Disconnected');
+    };
+    websocket.onerror = function(error) {
+      setConnectionStatus('Error');
+    };
+    // Cleanup on unmount or teamName change
     return () => {
-      if (ws) {
-        ws.close();
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [teamName]);
+
+  // Slowly add tweets one at a time
+  useEffect(() => {
+    const MAX_TWEETS = 20;
+    if (pendingTweets.length > 0) {
+      const timer = setTimeout(() => {
+        setTweets(prev => {
+          const updated = [pendingTweets[0], ...prev];
+          return updated.slice(0, MAX_TWEETS); // Only keep the newest MAX_TWEETS
+        });
+        setPendingTweets(prev => prev.slice(1));
+      }, 1200); // 1.2 seconds between tweets
+      return () => clearTimeout(timer);
+    }
+  }, [pendingTweets]);
 
   const getStatusColor = () => {
     if (connectionStatus === 'Connected') return 'text-green-400';
@@ -124,80 +139,40 @@ const LiveTweets = ({ teamName }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Live Tweets - {teamName}</h2>
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-medium ${getStatusColor()}`}>
-            {connectionStatus}
-          </span>
-          <span className="text-xs text-gray-500">
-            ({tweets.length} tweets)
-          </span>
+          <span className={`text-sm font-medium ${getStatusColor()}`}>{connectionStatus}</span>
+          <span className="text-xs text-gray-500">({tweets.length} tweets)</span>
         </div>
-      </div>
-
-      {/* Control buttons */}
-      <div className="flex gap-2 mb-4">
-        <button 
-          onClick={connect}
-          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
-        >
-          Connect
-        </button>
-        <button 
-          onClick={disconnect}
-          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded"
-        >
-          Disconnect
-        </button>
-        <button 
-          onClick={sendPing}
-          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded"
-        >
-          Ping
-        </button>
-        <button 
-          onClick={clearTweets}
-          className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded"
-        >
-          Clear
-        </button>
       </div>
 
       {/* Tweets Display */}
       {tweets.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-bold mb-2">Live Tweets:</h3>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <h3 className="text-lg font-bold mb-2 text-blue-300">Top Tweets:</h3>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
             {tweets.map((tweet) => (
               <div
                 key={tweet.id}
-                className="p-3 bg-[#1e293b] rounded-lg border-l-4 border-blue-500"
+                className="p-4 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 rounded-xl shadow-lg border-l-8 border-blue-500"
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-sm">{tweet.user}</span>
-                  <span className="text-gray-500 text-xs">{formatTime(tweet.timestamp)}</span>
-                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    LIVE
-                  </span>
-                  <span className="text-xs">
-                    {getSentimentEmoji(tweet.sentiment)}
-                  </span>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="font-bold text-base text-white">{tweet.user}</span>
+                  <span className="text-gray-400 text-xs">{formatTime(tweet.timestamp)}</span>
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow">LIVE</span>
+                  {tweet.sentiment_label && (
+                    <span className="text-xs font-semibold text-yellow-300">
+                      {tweet.sentiment_label} ({tweet.sentiment_score.toFixed(2)})
+                    </span>
+                  )}
+                  <span className="text-xs text-blue-200">{tweet.topic}</span>
                 </div>
-                <p className="text-gray-300 text-sm">{tweet.text}</p>
+                <p className="text-gray-100 text-base mb-2">{tweet.text}</p>
+                {tweet.location && (
+                  <div className="text-xs text-gray-300">Location: {tweet.location}</div>
+                )}
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {tweets.length > 0 && (
-        <div className="mt-4 text-center">
-          <button 
-            onClick={clearTweets}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            Clear tweets
-          </button>
         </div>
       )}
     </div>

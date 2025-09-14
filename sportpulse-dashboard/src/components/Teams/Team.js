@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import StatsOverview from "./StatsOverview";
 import SentimentChart from "./SentimentChart";
-import TopPosts from "./TopPosts";
 import LiveTweets from "./LiveTweets";
 import { useParams, useLocation } from "react-router-dom";
 import { apiEndpoints } from "../../config/api";
@@ -148,12 +147,25 @@ const TeamPage = () => {
 
   // Handler for receiving live sentiment updates
   const handleSentimentUpdate = (newSentimentStats) => {
-    setLiveSentimentData({
-      positive: newSentimentStats.positive,
-      neutral: newSentimentStats.neutral,
-      negative: newSentimentStats.negative,
-      trend: 0, // Could calculate trend from previous data
-    });
+    // Accepts either aggregate or single tweet update
+    if (newSentimentStats.sentiment_label) {
+      setLiveSentimentData(prev => {
+        const base = prev || { positive: 0, neutral: 0, negative: 0, trend: 0 };
+        let updated = { ...base };
+        if (newSentimentStats.sentiment_label === 'positive') updated.positive = (updated.positive || 0) + 1;
+        if (newSentimentStats.sentiment_label === 'neutral') updated.neutral = (updated.neutral || 0) + 1;
+        if (newSentimentStats.sentiment_label === 'negative') updated.negative = (updated.negative || 0) + 1;
+        updated.trend = 0;
+        return updated;
+      });
+    } else {
+      setLiveSentimentData({
+        positive: newSentimentStats.positive,
+        neutral: newSentimentStats.neutral,
+        negative: newSentimentStats.negative,
+        trend: 0,
+      });
+    }
   };
 
   const fetchTeamStats = async () => {
@@ -316,7 +328,7 @@ const TeamPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <StatsOverview teamStats={teamStats} />
         <div>
-          <SentimentChart {...sentimentData} />
+          <SentimentChart teamName={standardizedTeamName} {...sentimentData} />
           {liveSentimentData && (
             <div className="mt-2 text-center">
               <span className="bg-green-900/20 text-green-400 text-xs px-2 py-1 rounded-full">
@@ -327,8 +339,7 @@ const TeamPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TopPosts />
+      <div className="grid grid-cols-1  gap-6">
         <LiveTweets teamName={standardizedTeamName} onSentimentUpdate={handleSentimentUpdate} />
       </div>
     </div>
