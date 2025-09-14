@@ -14,7 +14,7 @@ const LiveTweets = ({ teamName }) => {
       return;
     }
 
-    const apiUrl = "ws://localhost:8001/api/v1/ws/kafka/";
+    const apiUrl = "ws://localhost:8000/api/v1/ws/kafka/";
     const wsUrl = `${apiUrl}${teamName}`;
     
     setConnectionStatus('Connecting...');

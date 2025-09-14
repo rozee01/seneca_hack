@@ -24,7 +24,7 @@
         <div class="section">
             <h3>📋 Testing Instructions</h3>
             <ol>
-                <li><strong>Start API:</strong> Make sure your API is running on port 8001</li>
+                <li><strong>Start API:</strong> Make sure your API is running on port 8000</li>
                 <li><strong>Check Health:</strong> Click "Check Health" to verify API status</li>
                 <li><strong>Connect:</strong> Select a topic and click "Connect"</li>
                 <li><strong>Test:</strong> Click "Test Send Message" to verify WebSocket works</li>
@@ -35,7 +35,7 @@
         <div class="section">
             <h3>Connection Settings</h3>
             <label>API URL: </label>
-            <input type="text" id="apiUrl" value="ws://localhost:8001/api/v1/ws/kafka/" style="width: 300px;">
+            <input type="text" id="apiUrl" value="ws://localhost:8000/api/v1/ws/kafka/" style="width: 300px;">
             <br><br>
             
             <label>Topic: </label>
@@ -73,9 +73,9 @@
         
         <div class="section">
             <h3>📊 Debug Info</h3>
-            <p><strong>WebSocket URL Pattern:</strong> <code>ws://localhost:8001/api/v1/ws/kafka/{topic}</code></p>
-            <p><strong>Test Send URL:</strong> <code>http://localhost:8001/api/v1/ws/test-send/{topic}</code></p>
-            <p><strong>Health Check URL:</strong> <code>http://localhost:8001/api/v1/ws/health</code></p>
+            <p><strong>WebSocket URL Pattern:</strong> <code>ws://localhost:8000/api/v1/ws/kafka/{topic}</code></p>
+            <p><strong>Test Send URL:</strong> <code>http://localhost:8000/api/v1/ws/test-send/{topic}</code></p>
+            <p><strong>Health Check URL:</strong> <code>http://localhost:8000/api/v1/ws/health</code></p>
         </div>
     </div>
 
@@ -182,7 +182,7 @@
             }
             
             try {
-                const response = await fetch(`http://localhost:8001/api/v1/ws/test-send/${topic}`, {
+                const response = await fetch(`http://localhost:8000/api/v1/ws/test-send/${topic}`, {
                     method: 'POST'
                 });
                 const result = await response.json();
@@ -194,7 +194,7 @@
         
         async function checkHealth() {
             try {
-                const response = await fetch('http://localhost:8001/api/v1/ws/health');
+                const response = await fetch('http://localhost:8000/api/v1/ws/health');
                 const result = await response.json();
                 addMessage(`Health check: ${JSON.stringify(result, null, 2)}`, 'success');
             } catch (error) {
