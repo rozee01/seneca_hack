@@ -10,3 +10,14 @@ in order to access postgress table :
 streaming running   python .\tweet_simulator.py --csv combined_sports.csv --rate 5 --broker localhost:9092 
 
 preprocessing stream : docker exec -it sportpulse-spark-app spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0  /app/stream_processing/preprocessing.py
+
+
+commandes elli zedt'hom toul:
+docker exec -it sportpulse-spark-app pip install pyarrow>=4.0.0
+docker exec -it sportpulse-spark-app mkdir -p /tmp/huggingface
+docker exec -it sportpulse-spark-app bash -c "export HF_HOME=/tmp/huggingface"
+docker exec -it sportpulse-spark-app bash -c "export HF_HOME=/tmp/huggingface && spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/stream_processing/preprocessing.py"
+
+
+
+docker exec -it sportpulse-spark-app bash -c "export HF_HOME=/tmp/huggingface && spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/stream_processing/preprocessing.py"

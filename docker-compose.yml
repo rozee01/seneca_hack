@@ -84,14 +84,29 @@ services:
       SPARK_DRIVER_MEMORY: 4g
       SPARK_EXECUTOR_MEMORY: 4g
     volumes:
-      - ./sport-pulse-app:/app/sport-pulse-app
-      - ./sport-pulse-data:/app/data
       - ./.env:/app/.env
       - ./requirements.txt:/app/requirements.txt
       - ./spark-batch-processing:/app/spark-batch-processing
       - ./stream_processing:/app/stream_processing
     command: >
-      sh -c "pip install --no-cache-dir -r /app/requirements.txt && tail -f /dev/null"
+      sh -c "pip install --no-cache-dir -r /app/requirements.txt && export HF_HOME=/tmp/huggingface && spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/stream_processing/preprocessing.py"    
+    networks:
+      - app-network
+
+  tweet-simulator:
+    image: python:3.11
+    container_name: sportpulse-tweet-simulator
+    depends_on:
+      - kafka
+    volumes:
+      - ./tweet_simulator:/app/tweet_simulator
+      - ./tweet_simulator/combined_sports.csv:/app/combined_sports.csv
+      - ./tweet_simulator/requirements.txt:/app/requirements.txt
+    working_dir: /app/tweet_simulator
+    environment:
+      KAFKA_BROKER: "kafka:29092"
+    command: >
+      sh -c "pip install --no-cache-dir -r /app/requirements.txt && python tweet_simulator.py --csv /app/combined_sports.csv --rate 5 --broker kafka:29092"
     networks:
       - app-network
 
