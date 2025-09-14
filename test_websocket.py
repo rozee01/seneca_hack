@@ -10,7 +10,7 @@ from datetime import datetime
 
 async def test_websocket_connection():
     """Test WebSocket connection to specific topic."""
-    uri = "ws://localhost:8001/api/v1/ws/kafka/Liverpool"
+    uri = "ws://localhost:8000/api/v1/ws/kafka/Liverpool"
     
     print(f"🔌 Connecting to: {uri}")
     
@@ -65,7 +65,7 @@ async def test_websocket_connection():
 
 async def test_all_topics():
     """Test WebSocket connection to all topics."""
-    uri = "ws://localhost:8001/api/v1/ws/kafka/all"
+    uri = "ws://localhost:8000/api/v1/ws/kafka/all"
     
     print(f"🔌 Connecting to ALL topics: {uri}")
     
@@ -114,7 +114,7 @@ async def test_health_endpoint():
     
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get('http://localhost:8001/api/v1/ws/health') as response:
+            async with session.get('http://localhost:8000/api/v1/ws/health') as response:
                 data = await response.json()
                 print("🏥 Health Check Result:")
                 print(json.dumps(data, indent=2))
@@ -153,7 +153,7 @@ async def main():
 
 if __name__ == "__main__":
     print("🚀 WebSocket Test Client")
-    print("Make sure your API is running on localhost:8001")
+    print("Make sure your API is running on localhost:8000")
     print("And that Kafka is running with some test data")
     print("\nPress Ctrl+C to stop\n")
     

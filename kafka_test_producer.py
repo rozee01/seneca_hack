@@ -53,7 +53,7 @@ if __name__ == "__main__":
     print("This will send 5 test messages to cleaned_Liverpool topic")
     print("Make sure:")
     print("1. Kafka is running on localhost:9092")
-    print("2. Your API is running on localhost:8001") 
+    print("2. Your API is running on localhost:8000") 
     print("3. WebSocket is connected to Liverpool topic")
     print()
     

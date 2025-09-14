@@ -39,7 +39,7 @@ const useKafkaWebSocket = (teamName) => {
     const connectWebSocket = () => {
       try {
         setConnectionStatus('connecting');
-        const wsUrl = `ws://localhost:8001/api/v1/ws/kafka/${teamName}`;
+        const wsUrl = `ws://localhost:8000/api/v1/ws/kafka/${teamName}`;
         
         console.log(`Connecting to WebSocket: ${wsUrl}`);
         wsRef.current = new WebSocket(wsUrl);

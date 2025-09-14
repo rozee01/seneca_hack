@@ -20,68 +20,92 @@ const TeamPage = () => {
   // Map URL team names to standardized Kafka topic names
   const getStandardizedTeamName = (urlTeamName) => {
     const baseTeams = [
-      'Liverpool', 'Chelsea', 'Arsenal', 'ManchesterUnited', 'TottenhamHotspur', 
-      'Everton', 'LeicesterCity', 'AFC_Bournemouth', 'Southampton',
+      'Birmingham', 'Liverpool', 'Leicester', 'Sheffield', 'Galatasaray',
+      'Internazionale', 'PSV', 'Burnley', 'Norwich', 'Manchester',
+      'Chelsea', 'Arsenal', 'Tottenham', 'Everton', 'Bournemouth', 'Southampton'
     ];
     
     // Create mapping from various formats to standard names
     const teamMapping = {
+      // Birmingham variations
+      'birmingham city': 'Birmingham',
+      'birmingham city fc': 'Birmingham',
+      'birmingham fc': 'Birmingham',
+      
       // Liverpool variations
-      'liverpool': 'Liverpool',
-      'liverpool-fc': 'Liverpool',
       'liverpool fc': 'Liverpool',
-      'liverpoolfc': 'Liverpool',
+      'liverpool': 'Liverpool',
+      
+      // Leicester variations
+      'leicester city': 'Leicester',
+      'leicester city fc': 'Leicester',
+      'leicester fc': 'Leicester',
+      'leicester': 'Leicester',
+      
+      // Sheffield variations
+      'sheffield united': 'Sheffield',
+      'sheffield united fc': 'Sheffield',
+      'sheffield fc': 'Sheffield',
+      'sheffield': 'Sheffield',
+      
+      // Galatasaray variations
+      'galatasaray': 'Galatasaray',
+      'galatasaray sk': 'Galatasaray',
+      
+      // Internazionale variations
+      'fc internazionale milano': 'Internazionale',
+      'internazionale': 'Internazionale',
+      'inter': 'Internazionale',
+      'inter milan': 'Internazionale',
+      
+      // PSV variations
+      'psv': 'PSV',
+      'psv eindhoven': 'PSV',
+      
+      // Burnley variations
+      'burnley fc': 'Burnley',
+      'burnley': 'Burnley',
+      
+      // Norwich variations
+      'norwich city': 'Norwich',
+      'norwich city fc': 'Norwich',
+      'norwich fc': 'Norwich',
+      'norwich': 'Norwich',
+      
+      // Manchester variations (both City and United)
+      'manchester city': 'Manchester',
+      'manchester city fc': 'Manchester',
+      'manchester fc': 'Manchester',
+      'manchester united': 'Manchester',
+      'manchester united fc': 'Manchester',
+      'manchester': 'Manchester',
       
       // Chelsea variations
-      'chelsea': 'Chelsea',
-      'chelsea-fc': 'Chelsea',
       'chelsea fc': 'Chelsea',
-      'chelseafc': 'Chelsea',
+      'chelsea': 'Chelsea',
       
       // Arsenal variations
-      'arsenal': 'Arsenal',
-      'arsenal-fc': 'Arsenal',
       'arsenal fc': 'Arsenal',
-      'arsenalfc': 'Arsenal',
-      
-      // Manchester United variations
-      'manchester-united': 'ManchesterUnited',
-      'manchester united': 'ManchesterUnited',
-      'man-utd': 'ManchesterUnited',
-      'man utd': 'ManchesterUnited',
-      'manutd': 'ManchesterUnited',
-      'manchesterunited': 'ManchesterUnited',
+      'arsenal': 'Arsenal',
       
       // Tottenham variations
-      'tottenham': 'TottenhamHotspur',
-      'tottenham-hotspur': 'TottenhamHotspur',
-      'tottenham hotspur': 'TottenhamHotspur',
-      'spurs': 'TottenhamHotspur',
-      'tottenhamhotspur': 'TottenhamHotspur',
+      'tottenham': 'Tottenham',
+      'tottenham hotspur': 'Tottenham',
+      'tottenham fc': 'Tottenham',
+      'spurs': 'Tottenham',
       
       // Everton variations
-      'everton': 'Everton',
-      'everton-fc': 'Everton',
       'everton fc': 'Everton',
-      'evertonfc': 'Everton',
+      'everton': 'Everton',
       
-      // Leicester City variations
-      'leicester': 'LeicesterCity',
-      'leicester-city': 'LeicesterCity',
-      'leicester city': 'LeicesterCity',
-      'leicestercity': 'LeicesterCity',
-      
-      // AFC Bournemouth variations
-      'bournemouth': 'AFC_Bournemouth',
-      'afc-bournemouth': 'AFC_Bournemouth',
-      'afc bournemouth': 'AFC_Bournemouth',
-      'afcbournemouth': 'AFC_Bournemouth',
+      // Bournemouth variations
+      'afc bournemouth': 'Bournemouth',
+      'bournemouth fc': 'Bournemouth',
+      'bournemouth': 'Bournemouth',
       
       // Southampton variations
-      'southampton': 'Southampton',
-      'southampton-fc': 'Southampton',
       'southampton fc': 'Southampton',
-      'southamptonfc': 'Southampton',
+      'southampton': 'Southampton',
     };
     
     // Normalize the input (lowercase, replace spaces/hyphens)
