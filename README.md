@@ -1,5 +1,30 @@
 # Sportpulse Web App & API
 
+## Problem Statement
+Sports organizations, analysts, and fans often struggle to keep up with the massive flow of real-time data (tweets, stats, and updates) from football and NBA games.  
+Existing tools usually focus either on historical analytics or live updates, but not both together in a unified, scalable platform.  
+There is a need for a solution that combines **real-time sentiment analysis** with **batch historical insights** to provide a complete picture of team performance and fan perception.
+
+---
+
+## Solution
+**Sportpulse** solves this by leveraging a **Lambda architecture** that integrates both real-time and batch data processing.  
+- Real-time pipelines ingest and analyze team-related tweets to measure fan sentiment as games unfold.  
+- Batch pipelines process historical data for long-term performance and trend analysis.  
+- A web dashboard combines both, providing a single interface for **live updates**, **analytics**, and **insights**.
+
+---
+
+## Features
+- **Real-time sentiment analysis** on football and NBA team tweets.  
+- **Batch processing** of historical team data for trend analysis.  
+-  Data stored in **MongoDB** (real-time) and **Postgres** (batch).  
+-  **Kafka-based streaming** pipeline for scalable event handling.  
+-  **Interactive dashboard** with live updates and team insights.  
+-  Pretrained sentiment model integrated with Spark for scalable analytics.  
+
+---
+
 ## Overview
 **Sportpulse** is a real-time and batch analytics platform for **Football and NBA** data. It leverages a **Lambda architecture** to provide:
 
@@ -63,3 +88,4 @@ flowchart LR
     class D,K db;
     class B,J,L compute;
     class A streaming;
+
