@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kafka WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #messages { height: 400px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px; background: #f9f9f9; font-family: monospace; }
+        .message { margin: 5px 0; padding: 8px; background: white; border-radius: 3px; border-left: 4px solid #007bff; }
+        .message.error { border-left-color: #dc3545; background: #f8d7da; }
+        .message.success { border-left-color: #28a745; background: #d4edda; }
+        .error { color: red; }
+        .success { color: green; }
+        select { padding: 5px; margin: 5px; }
+        code { background: #e9ecef; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kafka WebSocket Test</h1>
+        
+        <div class="section">
+            <h3>📋 Testing Instructions</h3>
+            <ol>
+                <li><strong>Start API:</strong> Make sure your API is running on port 8001</li>
+                <li><strong>Check Health:</strong> Click "Check Health" to verify API status</li>
+                <li><strong>Connect:</strong> Select a topic and click "Connect"</li>
+                <li><strong>Test:</strong> Click "Test Send Message" to verify WebSocket works</li>
+                <li><strong>Generate Messages:</strong> Run your tweet simulator or kafka_test_producer.py</li>
+            </ol>
+        </div>
+        
+        <div class="section">
+            <h3>Connection Settings</h3>
+            <label>API URL: </label>
+            <input type="text" id="apiUrl" value="ws://localhost:8001/api/v1/ws/kafka/" style="width: 300px;">
+            <br><br>
+            
+            <label>Topic: </label>
+            <select id="topicSelect">
+                <option value="Liverpool">Liverpool</option>
+                <option value="Chelsea">Chelsea</option>
+                <option value="Arsenal">Arsenal</option>
+                <option value="ManchesterUnited">Manchester United</option>
+                <option value="TottenhamHotspur">Tottenham Hotspur</option>
+                <option value="Everton">Everton</option>
+                <option value="LeicesterCity">Leicester City</option>
+                <option value="AFC_Bournemouth">AFC Bournemouth</option>
+                <option value="Southampton">Southampton</option>
+                <option value="all">All Topics</option>
+            </select>
+            
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+            <button onclick="sendPing()">Send Ping</button>
+            <button onclick="testSendMessage()">Test Send Message</button>
+            <button onclick="checkHealth()">Check Health</button>
+            <button onclick="clearMessages()">Clear Messages</button>
+        </div>
+        
+        <div class="section">
+            <h3>Connection Status</h3>
+            <div id="status">Disconnected</div>
+        </div>
+        
+        <div class="section">
+            <h3>Messages</h3>
+            <p><strong>Expected format:</strong> Messages from Kafka topic <code>cleaned_{TeamName}</code> → WebSocket as <code>{TeamName}</code></p>
+            <div id="messages"></div>
+        </div>
+        
+        <div class="section">
+            <h3>📊 Debug Info</h3>
+            <p><strong>WebSocket URL Pattern:</strong> <code>ws://localhost:8001/api/v1/ws/kafka/{topic}</code></p>
+            <p><strong>Test Send URL:</strong> <code>http://localhost:8001/api/v1/ws/test-send/{topic}</code></p>
+            <p><strong>Health Check URL:</strong> <code>http://localhost:8001/api/v1/ws/health</code></p>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        
+        function updateStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = isError ? 'error' : 'success';
+        }
+        
+        function addMessage(message, type = 'info') {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            
+            // Format JSON nicely if it's a JSON object
+            let displayMessage = message;
+            if (typeof message === 'object') {
+                displayMessage = JSON.stringify(message, null, 2);
+            } else if (typeof message === 'string' && message.includes('{')) {
+                try {
+                    const parsed = JSON.parse(message.split(': ')[1] || message);
+                    displayMessage = message.split(': ')[0] + ': ' + JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    // Keep original message if parsing fails
+                }
+            }
+            
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong><br><pre style="margin: 5px 0; white-space: pre-wrap;">${displayMessage}</pre>`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addMessage('Already connected', 'error');
+                return;
+            }
+            
+            const apiUrl = document.getElementById('apiUrl').value;
+            const topic = document.getElementById('topicSelect').value;
+            const wsUrl = topic === 'all' ? `${apiUrl}all` : `${apiUrl}${topic}`;
+            
+            addMessage(`Connecting to: ${wsUrl}`);
+            updateStatus('Connecting...');
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function(event) {
+                updateStatus('Connected');
+                addMessage('WebSocket connection opened', 'success');
+            };
+            
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    addMessage(`Received: ${JSON.stringify(data, null, 2)}`, 'success');
+                } catch (e) {
+                    addMessage(`Received (raw): ${event.data}`, 'success');
+                }
+            };
+            
+            ws.onclose = function(event) {
+                updateStatus('Disconnected', true);
+                addMessage(`WebSocket connection closed. Code: ${event.code}, Reason: ${event.reason}`, 'error');
+            };
+            
+            ws.onerror = function(error) {
+                updateStatus('Error', true);
+                addMessage(`WebSocket error: ${error}`, 'error');
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                updateStatus('Disconnected');
+                addMessage('Disconnected by user');
+            }
+        }
+        
+        function sendPing() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const ping = { type: 'ping', timestamp: Date.now() };
+                ws.send(JSON.stringify(ping));
+                addMessage(`Sent ping: ${JSON.stringify(ping)}`);
+            } else {
+                addMessage('Not connected', 'error');
+            }
+        }
+        
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+        
+        async function testSendMessage() {
+            const topic = document.getElementById('topicSelect').value;
+            if (topic === 'all') {
+                addMessage('Cannot test send to "all" topic', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8001/api/v1/ws/test-send/${topic}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                addMessage(`Test send result: ${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                addMessage(`Test send failed: ${error}`, 'error');
+            }
+        }
+        
+        async function checkHealth() {
+            try {
+                const response = await fetch('http://localhost:8001/api/v1/ws/health');
+                const result = await response.json();
+                addMessage(`Health check: ${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                addMessage(`Health check failed: ${error}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

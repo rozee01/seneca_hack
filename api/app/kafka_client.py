@@ -25,6 +25,7 @@ class KafkaClient:
         self.producer: Optional[AIOKafkaProducer] = None
         self.is_connected = False
         self.message_handlers: Dict[str, List[Callable]] = {}
+        self.websocket_handlers: Dict[str, List[Callable]] = {}
         self.running = False
         
     async def start(self) -> None:
@@ -107,14 +108,21 @@ class KafkaClient:
         self.message_handlers[topic].append(handler)
         logger.info(f"Message handler registered for topic {topic}: {handler.__name__}")
     
+    def register_websocket_handler(self, topic: str, handler: Callable) -> None:
+        """Register a WebSocket handler for real-time message streaming."""
+        if topic not in self.websocket_handlers:
+            self.websocket_handlers[topic] = []
+        self.websocket_handlers[topic].append(handler)
+        logger.info(f"WebSocket handler registered for topic {topic}")
+    
     async def subscribe_to_sports_topics(self, team_names: List[str]) -> None:
         """Subscribe to sports topics dynamically."""
         if not self.consumer:
             logger.error("Consumer not initialized")
             return
             
-        # Topics are just team names, not prefixed with "cleaned_"
-        sports_topics = team_names
+        # Topics are in cleaned_TeamName format
+        sports_topics = [f"cleaned_{team}" for team in team_names]
         
         try:
             # Get current subscription
@@ -137,15 +145,22 @@ class KafkaClient:
     
     async def handle_sports_topic_message(self, topic: str, message: Dict[str, Any], key: Optional[str], timestamp: int) -> None:
         """Handle messages from sports topics."""
-        # Check if this is a sports topic (team names like Liverpool, Chelsea, etc.)
+        # Check if this is a cleaned sports topic (cleaned_TeamName format)
+        base_topic = topic
+        if topic.startswith('cleaned_'):
+            base_topic = topic.replace('cleaned_', '')
+        
         known_teams = [
             'Liverpool', 'Chelsea', 'Arsenal', 'ManchesterUnited', 'TottenhamHotspur', 
             'Everton', 'LeicesterCity', 'AFC_Bournemouth', 'Southampton'
         ]
         
-        if topic in known_teams:
-            from .sports_processor import sports_processor
-            await sports_processor.process_sports_message(message, topic, key, timestamp)
+        if base_topic in known_teams:
+            try:
+                from .sports_processor import sports_processor
+                await sports_processor.process_sports_message(message, base_topic, key, timestamp)
+            except ImportError:
+                logger.warning("sports_processor not available, skipping database processing")
         else:
             # Handle other specific topics
             if topic in self.message_handlers:
@@ -156,6 +171,23 @@ class KafkaClient:
                         logger.error(f"Error in message handler for topic {topic}: {str(e)}")
             else:
                 logger.warning(f"No handlers registered for topic: {topic}")
+        
+        # Send to WebSocket handlers using base topic name for routing
+        if base_topic in self.websocket_handlers:
+            for ws_handler in self.websocket_handlers[base_topic]:
+                try:
+                    # Format message for WebSocket
+                    ws_message = {
+                        "topic": base_topic,  # Use base topic name (e.g., "Liverpool")
+                        "original_topic": topic,  # Include original topic (e.g., "cleaned_Liverpool")
+                        "message": message,
+                        "key": key,
+                        "timestamp": timestamp,
+                        "received_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    await ws_handler(ws_message)
+                except Exception as e:
+                    logger.error(f"Error in WebSocket handler for topic {base_topic}: {str(e)}")
     
     async def consume_messages(self) -> None:
         """Main message consumption loop."""
@@ -236,15 +268,18 @@ class KafkaClient:
     async def get_topic_metadata(self) -> Dict[str, Any]:
         """Get metadata about Kafka topics."""
         try:
-            # Since we know the available topics from our Kafka setup, return them directly
-            # In a production system, you'd want to dynamically fetch these
-            known_topics = [
+            # Base team names (what frontend uses)
+            base_teams = [
                 'Liverpool', 'Chelsea', 'Arsenal', 'ManchesterUnited', 'TottenhamHotspur', 
                 'Everton', 'LeicesterCity', 'AFC_Bournemouth', 'Southampton',
             ]
             
+            # Actual Kafka topics (cleaned format)
+            kafka_topics = [f"cleaned_{team}" for team in base_teams]
+            
             return {
-                "topics": known_topics,
+                "frontend_topics": base_teams,  # What frontend should use for WebSocket connections
+                "kafka_topics": kafka_topics,   # Actual Kafka topic names
                 "brokers": [settings.KAFKA_BOOTSTRAP_SERVERS],
                 "consumer_group": getattr(settings, 'KAFKA_GROUP_ID', 'default-group'),
                 "connected": self.is_connected

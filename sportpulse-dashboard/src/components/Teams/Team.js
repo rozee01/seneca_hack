@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import StatsOverview from "./StatsOverview";
 import SentimentChart from "./SentimentChart";
 import TopPosts from "./TopPosts";
+import LiveTweets from "./LiveTweets";
 import { useParams, useLocation } from "react-router-dom";
 import { apiEndpoints } from "../../config/api";
 
@@ -11,15 +12,124 @@ const TeamPage = () => {
   const [teamStats, setTeamStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [liveSentimentData, setLiveSentimentData] = useState(null);
   
   // Determine sport from current path or default to NBA
   const currentSport = location.pathname.includes("/football") ? "football" : "nba";
   
-  const sentimentData = {
+  // Map URL team names to standardized Kafka topic names
+  const getStandardizedTeamName = (urlTeamName) => {
+    const baseTeams = [
+      'Liverpool', 'Chelsea', 'Arsenal', 'ManchesterUnited', 'TottenhamHotspur', 
+      'Everton', 'LeicesterCity', 'AFC_Bournemouth', 'Southampton',
+    ];
+    
+    // Create mapping from various formats to standard names
+    const teamMapping = {
+      // Liverpool variations
+      'liverpool': 'Liverpool',
+      'liverpool-fc': 'Liverpool',
+      'liverpool fc': 'Liverpool',
+      'liverpoolfc': 'Liverpool',
+      
+      // Chelsea variations
+      'chelsea': 'Chelsea',
+      'chelsea-fc': 'Chelsea',
+      'chelsea fc': 'Chelsea',
+      'chelseafc': 'Chelsea',
+      
+      // Arsenal variations
+      'arsenal': 'Arsenal',
+      'arsenal-fc': 'Arsenal',
+      'arsenal fc': 'Arsenal',
+      'arsenalfc': 'Arsenal',
+      
+      // Manchester United variations
+      'manchester-united': 'ManchesterUnited',
+      'manchester united': 'ManchesterUnited',
+      'man-utd': 'ManchesterUnited',
+      'man utd': 'ManchesterUnited',
+      'manutd': 'ManchesterUnited',
+      'manchesterunited': 'ManchesterUnited',
+      
+      // Tottenham variations
+      'tottenham': 'TottenhamHotspur',
+      'tottenham-hotspur': 'TottenhamHotspur',
+      'tottenham hotspur': 'TottenhamHotspur',
+      'spurs': 'TottenhamHotspur',
+      'tottenhamhotspur': 'TottenhamHotspur',
+      
+      // Everton variations
+      'everton': 'Everton',
+      'everton-fc': 'Everton',
+      'everton fc': 'Everton',
+      'evertonfc': 'Everton',
+      
+      // Leicester City variations
+      'leicester': 'LeicesterCity',
+      'leicester-city': 'LeicesterCity',
+      'leicester city': 'LeicesterCity',
+      'leicestercity': 'LeicesterCity',
+      
+      // AFC Bournemouth variations
+      'bournemouth': 'AFC_Bournemouth',
+      'afc-bournemouth': 'AFC_Bournemouth',
+      'afc bournemouth': 'AFC_Bournemouth',
+      'afcbournemouth': 'AFC_Bournemouth',
+      
+      // Southampton variations
+      'southampton': 'Southampton',
+      'southampton-fc': 'Southampton',
+      'southampton fc': 'Southampton',
+      'southamptonfc': 'Southampton',
+    };
+    
+    // Normalize the input (lowercase, replace spaces/hyphens)
+    const normalized = urlTeamName?.toLowerCase().replace(/[-_]/g, '-');
+    
+    // Try exact match first
+    if (teamMapping[normalized]) {
+      return teamMapping[normalized];
+    }
+    
+    // Try without hyphens/spaces
+    const withoutSeparators = normalized?.replace(/[-\s]/g, '');
+    if (teamMapping[withoutSeparators]) {
+      return teamMapping[withoutSeparators];
+    }
+    
+    // Check if it's already a base team name
+    const directMatch = baseTeams.find(team => 
+      team.toLowerCase() === normalized || 
+      team.toLowerCase().replace(/[-_]/g, '') === withoutSeparators
+    );
+    
+    if (directMatch) {
+      return directMatch;
+    }
+    
+    // Default fallback - return original if no mapping found
+    return urlTeamName;
+  };
+  
+  const standardizedTeamName = getStandardizedTeamName(teamName);
+  
+  // Default sentiment data (will be updated by live data)
+  const sentimentData = liveSentimentData || {
     positive: 75,
     neutral: 15,
     negative: 10,
     trend: 8,
+  };
+
+  // Handler for receiving live sentiment updates
+  const handleSentimentUpdate = (newSentimentStats) => {
+    setLiveSentimentData({
+      positive: newSentimentStats.positive,
+      neutral: newSentimentStats.neutral,
+      negative: newSentimentStats.negative,
+      trend: 0, // Could calculate trend from previous data
+    });
   };
 
   const fetchTeamStats = async () => {
@@ -181,10 +291,22 @@ const TeamPage = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <StatsOverview teamStats={teamStats} />
-        <SentimentChart {...sentimentData} />
+        <div>
+          <SentimentChart {...sentimentData} />
+          {liveSentimentData && (
+            <div className="mt-2 text-center">
+              <span className="bg-green-900/20 text-green-400 text-xs px-2 py-1 rounded-full">
+                📡 Live Data ({liveSentimentData.positive + liveSentimentData.neutral + liveSentimentData.negative} tweets)
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <TopPosts />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TopPosts />
+        <LiveTweets teamName={standardizedTeamName} onSentimentUpdate={handleSentimentUpdate} />
+      </div>
     </div>
   );
 };
