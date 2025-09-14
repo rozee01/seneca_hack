@@ -1,5 +1,6 @@
 # Sportpulse Web App & API
-
+## DEMO DRIVE LINK:
+https://drive.google.com/file/d/15WbzNvcWP0ilI3IHXxQzBmtvupvKTOXs/view?usp=sharing
 ## Problem Statement
 Sports organizations, analysts, and fans often struggle to keep up with the massive flow of real-time data (tweets, stats, and updates) from football and NBA games.  
 Existing tools usually focus either on historical analytics or live updates, but not both together in a unified, scalable platform.  
@@ -89,7 +90,30 @@ flowchart LR
     class D,K db;
     class B,J,L compute;
     class A streaming;
-
+```
 
 ## Running Steps:
+
+1. Build the modules using Docker:
+ ```
+docker-compose up
+```
+
+2. Install the API's requirements and run it:
+```
+cd api
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+```
+
+3. Install the frontend packages and run it:
+```
+cd sportpulse-dashboard
+npm i
+npm start
+```
+ 
+
 
