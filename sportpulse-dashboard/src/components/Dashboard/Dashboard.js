@@ -43,6 +43,9 @@ const Dashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
+    // Clear existing data when switching sports
+    setTopTeams([]);
+    setTableData([]);
     
     try {
       // Fetch top teams

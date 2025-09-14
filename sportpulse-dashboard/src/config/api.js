@@ -1,7 +1,7 @@
 // API configuration
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-export const apiEndpoints = {
+export const                                apiEndpoints = {
   nba: {
     topTeams: `${API_BASE_URL}/api/v1/nba/top-teams`,
     teamMentions: `${API_BASE_URL}/api/v1/nba/team-mentions`,
