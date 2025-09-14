@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Header from "./components/Header/Header";
 import Dashboard from "./components/Dashboard/Dashboard";
@@ -20,6 +20,8 @@ function App() {
               <Route path="/football" element={<Dashboard />} />
               <Route path="/nba" element={<Dashboard />} />
               <Route path="/team/:teamName" element={<TeamPage />} />
+              <Route path="/football/team/:teamName" element={<TeamPage />} />
+              <Route path="/nba/team/:teamName" element={<TeamPage />} />
             </Routes>
           </div>
         </div>

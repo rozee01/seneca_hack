@@ -1,14 +1,27 @@
 import React from "react";
 
-const StatsOverview = () => {
+const StatsOverview = ({ teamStats }) => {
+  // Calculate win percentage if stats are available
+  const winPercentage = teamStats && teamStats.games_played > 0 
+    ? Math.round((teamStats.wins / teamStats.games_played) * 100)
+    : 55; // fallback
+
+  const displayStats = teamStats || {
+    wins: 45,
+    games_played: 82,
+    points: 95
+  };
+
   return (
     <div className="bg-[#1e293b] rounded-lg p-6">
-      <p className="text-gray-300 mb-2">Post Volume Over Time</p>
+      <p className="text-gray-300 mb-2">Team Performance Metrics</p>
       <div className="flex items-baseline gap-2 mb-2">
-        <p className="text-4xl font-bold">12,456</p>
-        <p className="text-green-500">+12%</p>
+        <p className="text-4xl font-bold">{winPercentage}%</p>
+        <p className="text-green-500">Win Rate</p>
       </div>
-      <p className="text-gray-400 text-sm mb-4">Last 7 Days</p>
+      <p className="text-gray-400 text-sm mb-4">
+        {displayStats.wins} wins out of {displayStats.games_played} games
+      </p>
 
       <div className="h-40">
         <svg fill="none" height="100%" width="100%" viewBox="0 0 472 150">
@@ -35,6 +48,25 @@ const StatsOverview = () => {
           <span key={day}>{day}</span>
         ))}
       </div>
+      
+      {teamStats && (
+        <div className="mt-4 pt-4 border-t border-gray-600">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-blue-400">{displayStats.points}</p>
+              <p className="text-xs text-gray-400">Total Points</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-400">{displayStats.wins}</p>
+              <p className="text-xs text-gray-400">Wins</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-red-400">{teamStats.losses || 0}</p>
+              <p className="text-xs text-gray-400">Losses</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

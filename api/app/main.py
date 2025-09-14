@@ -113,6 +113,17 @@ async def root():
     }
 
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Simple health check endpoint."""
+    return {
+        "status": "healthy",
+        "timestamp": "2025-09-14T00:00:00Z",
+        "version": "1.0.0"
+    }
+
+
 # Test endpoints
 @app.get("/test/database")
 async def test_database():
