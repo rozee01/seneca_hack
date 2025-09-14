@@ -6,35 +6,47 @@ from pydantic import BaseModel
 from typing import List
 
 
-# Simple team data for dashboard top teams
+# Enhanced team data for investor-focused dashboard
 class TopTeam(BaseModel):
-    """Top team with points for dashboard ranking."""
+    """Top team with points and investor metrics for dashboard ranking."""
     name: str
     points: int
+    sponsorship_value_score: float  # Combined metric for investment appeal
+    growth_trend: str  # "up", "down", "stable"
+    fan_engagement: float  # Mentions per game or similar metric
+    sentiment_score: float  # Average sentiment (0-100)
     
     class Config:
         from_attributes = True
 
 
-# Team mentions data for dashboard table
+# Enhanced team mentions data for investor insights
 class TeamMention(BaseModel):
-    """Team mentions data for dashboard table."""
+    """Team mentions data with engagement metrics for dashboard table."""
     team: str
     mentions: str
     sentiment: str
+    weekly_change: str  # Percentage change in mentions
+    engagement_level: str  # "High", "Medium", "Low"
     
     class Config:
         from_attributes = True
 
 
-# Simple team stats for team overview page
+# Enhanced team stats for investor analysis
 class TeamStats(BaseModel):
-    """Basic team statistics for team page."""
+    """Comprehensive team statistics for investor evaluation."""
     team_name: str
     games_played: int
     wins: int
     losses: int
     points: int
+    win_percentage: float
+    sponsorship_value_score: float
+    fan_engagement: float
+    sentiment_score: float
+    growth_trend: str
+    market_reach: int  # Total mentions/followers estimate
     
     class Config:
         from_attributes = True

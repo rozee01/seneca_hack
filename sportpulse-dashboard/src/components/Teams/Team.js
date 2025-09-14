@@ -58,9 +58,12 @@ const TeamPage = () => {
     >
       <div className="mb-4">
         <h2 className="text-2xl font-bold">
-          Overview for {teamStats?.team_name || teamName}
+          Investment Analysis: {teamStats?.team_name || teamName}
           {loading && <span className="ml-2 text-sm text-gray-400">Loading...</span>}
         </h2>
+        <p className="text-gray-400 text-sm mt-1">
+          Comprehensive team metrics for sponsorship and investment decisions
+        </p>
         {error && (
           <div className="mt-2 p-3 bg-red-900 border border-red-700 rounded">
             <p className="text-red-200 text-sm">⚠️ {error}</p>
@@ -69,27 +72,111 @@ const TeamPage = () => {
       </div>
       
       {teamStats && (
-        <div className="mb-6 p-4 bg-[#1e293b] rounded-lg">
-          <h3 className="text-lg font-semibold mb-3">Team Statistics</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-gray-400">Games Played:</span>
-              <span className="ml-2 font-semibold">{teamStats.games_played}</span>
+        <>
+          {/* Sponsorship Value Score - Highlight */}
+          <div className="mb-6 p-6 bg-gradient-to-r from-[#1e293b] to-[#334155] rounded-lg border-l-4 border-blue-500">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-blue-400">Sponsorship Value Score</h3>
+              <div className="flex items-center gap-2">
+                <span className={`text-3xl font-bold ${
+                  teamStats.sponsorship_value_score >= 80 ? 'text-green-400' :
+                  teamStats.sponsorship_value_score >= 60 ? 'text-yellow-400' :
+                  'text-red-400'
+                }`}>
+                  {teamStats.sponsorship_value_score}/100
+                </span>
+                <span className={`text-sm px-3 py-1 rounded-full font-medium ${
+                  teamStats.sponsorship_value_score >= 80 ? 'bg-green-900 text-green-200' :
+                  teamStats.sponsorship_value_score >= 60 ? 'bg-yellow-900 text-yellow-200' :
+                  'bg-red-900 text-red-200'
+                }`}>
+                  {teamStats.sponsorship_value_score >= 80 ? 'Excellent Investment' :
+                   teamStats.sponsorship_value_score >= 60 ? 'Good Opportunity' :
+                   'High Risk'}
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-gray-400">Wins:</span>
-              <span className="ml-2 font-semibold text-green-400">{teamStats.wins}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Losses:</span>
-              <span className="ml-2 font-semibold text-red-400">{teamStats.losses}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Points:</span>
-              <span className="ml-2 font-semibold text-blue-400">{teamStats.points}</span>
+            <p className="text-gray-300 text-sm">
+              Combined score based on performance metrics, fan engagement, and sentiment analysis
+            </p>
+          </div>
+
+          {/* Performance Metrics */}
+          <div className="mb-6 p-4 bg-[#1e293b] rounded-lg">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              📊 Performance Metrics
+              <span className={`text-sm px-2 py-1 rounded-full ${
+                teamStats.growth_trend === 'up' ? 'bg-green-900 text-green-200' :
+                teamStats.growth_trend === 'down' ? 'bg-red-900 text-red-200' :
+                'bg-yellow-900 text-yellow-200'
+              }`}>
+                {teamStats.growth_trend === 'up' ? '📈 Growing' :
+                 teamStats.growth_trend === 'down' ? '📉 Declining' :
+                 '📊 Stable'}
+              </span>
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-gray-400">Games Played:</span>
+                <span className="ml-2 font-semibold">{teamStats.games_played}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Wins:</span>
+                <span className="ml-2 font-semibold text-green-400">{teamStats.wins}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Losses:</span>
+                <span className="ml-2 font-semibold text-red-400">{teamStats.losses}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Win Rate:</span>
+                <span className="ml-2 font-semibold text-blue-400">
+                  {((teamStats.win_percentage || 0) * 100).toFixed(1)}%
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Investment Metrics */}
+          <div className="mb-6 p-4 bg-[#1e293b] rounded-lg">
+            <h3 className="text-lg font-semibold mb-3">🎯 Investment Insights</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-[#0f172a] p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Fan Engagement</span>
+                  <span className="text-blue-400 text-lg font-bold">
+                    {teamStats.fan_engagement?.toLocaleString() || 'N/A'}
+                  </span>
+                </div>
+                <p className="text-gray-500 text-xs">Active mentions & interactions</p>
+              </div>
+              
+              <div className="bg-[#0f172a] p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Sentiment Score</span>
+                  <span className={`text-lg font-bold ${
+                    teamStats.sentiment_score >= 80 ? 'text-green-400' :
+                    teamStats.sentiment_score >= 60 ? 'text-yellow-400' :
+                    'text-red-400'
+                  }`}>
+                    {teamStats.sentiment_score}%
+                  </span>
+                </div>
+                <p className="text-gray-500 text-xs">Overall fan sentiment</p>
+              </div>
+              
+              <div className="bg-[#0f172a] p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Market Reach</span>
+                  <span className="text-purple-400 text-lg font-bold">
+                    {teamStats.market_reach?.toLocaleString() || 'N/A'}
+                  </span>
+                </div>
+                <p className="text-gray-500 text-xs">Estimated total audience</p>
+              </div>
+            </div>
+          </div>
+        </>
       )}
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
