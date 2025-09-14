@@ -12,7 +12,7 @@ import uvicorn
 from .config import settings
 from .database import init_db, close_db
 from .kafka_client import start_kafka_consumer, stop_kafka_consumer
-from .routes import kafka, nba, football
+from .routes import kafka, nba, football, websocket
 
 # Configure logging
 logging.basicConfig(
@@ -83,6 +83,7 @@ app.add_middleware(
 app.include_router(nba.router, prefix="/api/v1")
 app.include_router(football.router, prefix="/api/v1")
 app.include_router(kafka.router, prefix="/api/v1")
+app.include_router(websocket.router, prefix="/api/v1")
 
 
 # Global exception handler
