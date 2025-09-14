@@ -80,8 +80,7 @@ const LiveTweets = ({ teamName }) => {
     }
   };
 
-  const clearMessages = () => {
-    setMessages([]);
+  const clearTweets = () => {
     setTweets([]);
   };
 
@@ -157,7 +156,7 @@ const LiveTweets = ({ teamName }) => {
           Ping
         </button>
         <button 
-          onClick={clearMessages}
+          onClick={clearTweets}
           className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded"
         >
           Clear
@@ -191,24 +190,16 @@ const LiveTweets = ({ teamName }) => {
         </div>
       )}
 
-      {/* Debug Messages */}
-      <div>
-        <h3 className="text-lg font-bold mb-2">Debug Messages:</h3>
-        <div className="max-h-40 overflow-y-auto bg-gray-900 p-2 rounded text-xs font-mono">
-          {messages.map((msg, index) => (
-            <div 
-              key={index} 
-              className={`mb-1 ${
-                msg.type === 'error' ? 'text-red-400' : 
-                msg.type === 'success' ? 'text-green-400' : 
-                'text-gray-300'
-              }`}
-            >
-              [{msg.timestamp}] {msg.text}
-            </div>
-          ))}
+      {tweets.length > 0 && (
+        <div className="mt-4 text-center">
+          <button 
+            onClick={clearTweets}
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Clear tweets
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 };
