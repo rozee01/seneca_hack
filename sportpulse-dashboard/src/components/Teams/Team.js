@@ -41,24 +41,6 @@ const TeamPage = () => {
     } catch (err) {
       console.error('Error fetching team stats:', err);
       setError(err.message);
-      // Fallback stats based on sport
-      if (currentSport === 'football') {
-        setTeamStats({
-          team_name: teamName,
-          games_played: 38,
-          wins: 25,
-          losses: 8,
-          points: 78
-        });
-      } else {
-        setTeamStats({
-          team_name: teamName,
-          games_played: 82,
-          wins: 45,
-          losses: 37,
-          points: 95
-        });
-      }
     } finally {
       setLoading(false);
     }
@@ -81,7 +63,7 @@ const TeamPage = () => {
         </h2>
         {error && (
           <div className="mt-2 p-3 bg-red-900 border border-red-700 rounded">
-            <p className="text-red-200 text-sm">⚠️ {error} - Showing fallback data</p>
+            <p className="text-red-200 text-sm">⚠️ {error}</p>
           </div>
         )}
       </div>

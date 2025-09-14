@@ -1,16 +1,22 @@
 import React from "react";
 
 const StatsOverview = ({ teamStats }) => {
-  // Calculate win percentage if stats are available
-  const winPercentage = teamStats && teamStats.games_played > 0 
-    ? Math.round((teamStats.wins / teamStats.games_played) * 100)
-    : 55; // fallback
+  // Don't render if no team stats
+  if (!teamStats) {
+    return (
+      <div className="bg-[#1e293b] rounded-lg p-6">
+        <p className="text-gray-300 mb-2">Team Performance Metrics</p>
+        <div className="flex items-center justify-center h-40">
+          <p className="text-gray-500">No team data available</p>
+        </div>
+      </div>
+    );
+  }
 
-  const displayStats = teamStats || {
-    wins: 45,
-    games_played: 82,
-    points: 95
-  };
+  // Calculate win percentage
+  const winPercentage = teamStats.games_played > 0 
+    ? Math.round((teamStats.wins / teamStats.games_played) * 100)
+    : 0;
 
   return (
     <div className="bg-[#1e293b] rounded-lg p-6">
@@ -20,7 +26,7 @@ const StatsOverview = ({ teamStats }) => {
         <p className="text-green-500">Win Rate</p>
       </div>
       <p className="text-gray-400 text-sm mb-4">
-        {displayStats.wins} wins out of {displayStats.games_played} games
+        {teamStats.wins} wins out of {teamStats.games_played} games
       </p>
 
       <div className="h-40">
@@ -53,11 +59,11 @@ const StatsOverview = ({ teamStats }) => {
         <div className="mt-4 pt-4 border-t border-gray-600">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold text-blue-400">{displayStats.points}</p>
+              <p className="text-2xl font-bold text-blue-400">{teamStats.points}</p>
               <p className="text-xs text-gray-400">Total Points</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-400">{displayStats.wins}</p>
+              <p className="text-2xl font-bold text-green-400">{teamStats.wins}</p>
               <p className="text-xs text-gray-400">Wins</p>
             </div>
             <div>

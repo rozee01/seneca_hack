@@ -74,30 +74,6 @@ const Dashboard = () => {
     } catch (err) {
       console.error('Error fetching data:', err);
       setError(err.message);
-      // Fallback to mock data if API fails
-      if (currentSport === 'football') {
-        setTopTeams([
-          { name: "Manchester City", points: 78 },
-          { name: "Arsenal", points: 74 },
-          { name: "Liverpool", points: 70 },
-        ]);
-        setTableData([
-          { team: "Manchester City", mentions: "12,345", sentiment: "Positive" },
-          { team: "Arsenal", mentions: "10,234", sentiment: "Neutral" },
-          { team: "Liverpool", mentions: "8,765", sentiment: "Positive" },
-        ]);
-      } else {
-        setTopTeams([
-          { name: "Lakers", points: 95 },
-          { name: "Warriors", points: 88 },
-          { name: "Celtics", points: 82 },
-        ]);
-        setTableData([
-          { team: "Lakers", mentions: "12,345", sentiment: "Positive" },
-          { team: "Warriors", mentions: "10,234", sentiment: "Neutral" },
-          { team: "Celtics", mentions: "8,765", sentiment: "Positive" },
-        ]);
-      }
     } finally {
       setLoading(false);
     }
@@ -130,7 +106,7 @@ const Dashboard = () => {
       {error && (
         <div className="mb-4 p-4 bg-red-900 border border-red-700 rounded-lg">
           <p className="text-red-200">⚠️ API Error: {error}</p>
-          <p className="text-red-300 text-sm">Showing fallback data. Please check API connection.</p>
+          <p className="text-red-300 text-sm">Please check API connection and try refreshing the page.</p>
         </div>
       )}
       
