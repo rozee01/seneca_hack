@@ -89,7 +89,29 @@ flowchart LR
     class D,K db;
     class B,J,L compute;
     class A streaming;
-
+```
 
 ## Running Steps:
+
+1. Build the modules using Docker:
+ ```
+docker-compose up
+```
+
+2. Install the API's requirements and run it:
+```
+cd api
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+```
+
+3. Install the frontend packages and run it:
+```
+cd sportpulse-dashboard
+npm i
+npm start
+```
+ 
 
