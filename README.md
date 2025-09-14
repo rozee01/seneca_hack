@@ -41,7 +41,8 @@ There is a need for a solution that combines **real-time sentiment analysis** wi
 The platform consists of three main layers:
 
 ### 1. Streaming Layer (Real-Time)
-- Simulated team tweets sent to Kafka topics per team.
+- Tweets are **simulated from datasets** due to X (Twitter) API limitations.  
+- Simulated team tweets are sent to Kafka topics per team.
 - Spark Streaming cleans data and performs sentiment analysis using a pretrained model.
 - Results are stored in **MongoDB** and published to Kafka for the web app.
 - NBA tweets dataset: [Kaggle NBA Tweets](https://www.kaggle.com/datasets/wjia26/nba-tweets/data)
@@ -115,5 +116,6 @@ npm i
 npm start
 ```
  
+
 
 
