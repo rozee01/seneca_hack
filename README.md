@@ -16,7 +16,8 @@ There is a need for a solution that combines **real-time sentiment analysis** wi
 ---
 
 ## Features
-- **Real-time sentiment analysis** on football and NBA team tweets.  
+- **Real-time sentiment analysis** on football and NBA team tweets.
+      used model:  [cointegrated/rubert-tiny Hugging Face model](https://huggingface.co/cointegrated/rubert-tiny-sentiment-balanced)
 - **Batch processing** of historical team data for trend analysis.  
 -  Data stored in **MongoDB** (real-time) and **Postgres** (batch).  
 -  **Kafka-based streaming** pipeline for scalable event handling.  
@@ -89,4 +90,6 @@ flowchart LR
     class B,J,L compute;
     class A streaming;
 
+
+## Running Steps:
 
