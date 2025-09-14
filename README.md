@@ -65,7 +65,7 @@ flowchart LR
     subgraph Streaming_Layer["Streaming Layer (Real-Time)"]
         direction TB
         A[Simulated Tweets] -->|Team_name| B[Streaming Processing & Sentiment Analysis]
-        B --> D[Atlas MongoDB]
+        B --> D[MongoDB]
     end
 
     subgraph Batch_Layer["Batch Layer"]
@@ -88,4 +88,5 @@ flowchart LR
     class D,K db;
     class B,J,L compute;
     class A streaming;
+
 
